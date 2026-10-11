@@ -1,0 +1,2905 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Family Chaos</title></head><body>
+<style>
+/* Layout: ein Handy-Bildschirm wie bei Glowbies – Statusleiste, Puppenhaus als SVG (Räume antippen), Log, Pflichten, Aktionen; Szenen als Modal. Bewusst nur ein dunkles Design, wie das Schwesterspiel. */
+:root{
+  --wall:#1d1a2b; --plan:#2a2540; --line:#4a4266; --ink:#f3eefa; --muted:#a79fbe;
+  --lamp:#ffcf7a; --screen:#7fe3ff; --alarm:#ff7d8e; --good:#9be37c;
+  --display:"Fredoka","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--wall);color:var(--ink);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;overflow:hidden;-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit}
+.app{max-width:540px;margin:0 auto;padding-left:12px;padding-right:12px;padding-top:8px;padding-bottom:8px;display:flex;flex-direction:column;gap:7px;height:100%}
+
+/* Start */
+#start{justify-content:center;gap:12px;overflow:auto}
+.logo{font-family:var(--display);font-weight:700;font-size:clamp(38px,12vw,56px);line-height:1;margin:0;color:var(--lamp);text-wrap:balance}
+.logo span{color:var(--screen)}
+.sub{margin:6px 0 0;color:var(--muted);font-weight:700}
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fig{background:var(--plan);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-width:0;transition:transform .12s,border-color .2s}
+.fig:hover,.fig:focus-visible{border-color:var(--lamp);outline:none}
+.fig:active{transform:scale(.97)}
+.fig .tp{display:flex;align-items:center;gap:9px}
+.fig .tp svg{width:46px;height:46px;flex:none;display:block}
+.fig b{font-family:var(--display);font-size:1.2rem;font-weight:700;display:block;line-height:1.1}
+.fig small{color:var(--muted);font-weight:700}
+.fig p{margin:0;font-size:.78rem;line-height:1.35}
+.fig .best{font-size:.72rem;color:var(--lamp);font-weight:800}
+.rules{background:var(--plan);border-radius:14px;padding:10px 12px;font-size:.78rem;line-height:1.45;color:var(--muted)}
+.rules p{margin:0 0 5px}.rules p:last-child{margin:0}.rules b{color:var(--ink)}
+
+/* Statusleiste */
+.top{display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center;flex:none}
+.top .av svg{width:38px;height:38px;display:block}
+.clock{font-family:var(--display);font-weight:700;font-size:1.45rem;font-variant-numeric:tabular-nums;color:var(--lamp);line-height:1}
+.clock small{display:block;font-family:var(--body);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-top:3px}
+.sus{display:flex;flex-direction:column;gap:4px;min-width:0}
+.sus .lbl{font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800;display:flex;justify-content:space-between;gap:6px}
+.sus .lbl b{color:var(--ink);font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:5px;background:var(--plan);overflow:hidden}
+.bar div{height:100%;width:0;background:linear-gradient(90deg,var(--lamp),var(--alarm));transition:width .4s}
+.mstat{color:var(--screen);font-size:.72rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score{text-align:right;font-size:.62rem;color:var(--muted);font-weight:800;letter-spacing:.1em;text-transform:uppercase;line-height:1.15}
+.score b{display:block;font-family:var(--display);font-size:1.35rem;color:var(--good);letter-spacing:0;font-variant-numeric:tabular-nums}
+
+/* Haus */
+.main{flex:1;min-height:0;display:flex;flex-direction:column;gap:7px}
+.planwrap{flex:1 1 auto;min-height:220px;display:flex;align-items:center;justify-content:center}
+#house{width:100%;height:100%;display:block;border-radius:14px}
+.planwrap{position:relative}
+.plan{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.zoombtn{position:absolute;right:8px;top:8px;width:38px;height:38px;border-radius:50%;background:rgba(29,26,43,.8);border:1px solid var(--line);color:var(--ink);display:grid;place-items:center;cursor:pointer;z-index:2;padding:0}
+.zoombtn svg{width:18px;height:18px}
+.zoombtn:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
+.rooms{display:none;grid-template-columns:repeat(5,1fr);gap:4px}
+.minirow{display:flex;flex-direction:column;gap:6px}
+.minihost{display:none}
+.zoomed .minirow{display:grid;grid-template-columns:46% 1fr;align-items:stretch}
+.zoomed .minihost{display:block}
+.zoomed .log{font-size:.72rem;justify-content:flex-start}
+.zoomed .log p:not(:last-child){font-size:.68rem}
+.mini{width:100%;height:auto;display:block;border-radius:10px;cursor:pointer;background:var(--plan)}
+.rooms button{background:var(--plan);border:1px solid var(--line);border-radius:10px;padding:5px 2px;font-size:.66rem;font-weight:800;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-width:0}
+.rooms button.here{border-color:var(--lamp);color:var(--ink);background:#342d4f}
+.rooms button:focus-visible{outline:3px solid var(--lamp);outline-offset:1px}
+.rooms .dots{display:flex;gap:2px;min-height:13px;flex-wrap:wrap;justify-content:center}
+.rooms .dots i{width:13px;height:13px;border-radius:50%;display:block;font-style:normal;font-size:8px;line-height:13px;text-align:center;color:var(--wall);font-weight:800}
+.rooms .dots i.cat{background:#d9dce1}
+.rooms .dots i.sp{background:var(--alarm)}
+.rooms .dots i.q{background:var(--line);color:var(--ink)}
+#house .room{cursor:pointer;outline:none}
+#house .hl{fill:none;stroke:transparent;stroke-width:3;pointer-events:none}
+#house .here .hl{stroke:var(--lamp)}
+#house .plaque{pointer-events:none}
+.fg{transition:transform .75s ease-in-out,opacity .4s}
+.fg .body.walk{animation:bob .25s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-1.6px)}}
+.tailw{transform-box:fill-box;transform-origin:0% 100%;animation:tail 2.4s ease-in-out infinite}
+@keyframes tail{0%,100%{transform:rotate(0)}50%{transform:rotate(-14deg)}}
+.puff{transform-box:fill-box;transform-origin:50% 100%;animation:puff .3s ease-in-out infinite alternate}
+@keyframes puff{to{transform:scale(1.12)}}
+.sqt{transform-box:fill-box;transform-origin:0% 100%;animation:sq 3s ease-in-out infinite}
+@keyframes sq{0%,70%,100%{transform:rotate(0)}80%{transform:rotate(-12deg)}90%{transform:rotate(6deg)}}
+.ear{transform-box:fill-box;transform-origin:50% 0%;animation:ear 4s ease-in-out infinite}
+.ear.er{animation-delay:-2s}
+@keyframes ear{0%,85%,100%{transform:rotate(0)}90%{transform:rotate(14deg)}95%{transform:rotate(-6deg)}}
+.sway{transform-box:fill-box;transform-origin:50% 0%;animation:sway 3.6s ease-in-out infinite}
+.sway2{transform-box:fill-box;transform-origin:50% 100%;animation:sway 5s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.steam{animation:steam 2.2s ease-in-out infinite}
+.s2{animation-delay:.7s}.s3{animation-delay:1.4s}
+@keyframes steam{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:.9;transform:translateY(-1.5px)}}
+.smoke{animation:smoke 2.6s ease-in-out infinite}
+@keyframes smoke{0%{opacity:0;transform:translateY(3px)}40%{opacity:.8}100%{opacity:0;transform:translateY(-6px)}}
+.blink{animation:blink 1s steps(2) infinite}.b2{animation-delay:.5s}
+@keyframes blink{50%{opacity:.25}}
+.glowp{filter:drop-shadow(0 0 2px #7fe3ff);animation:glowp 1.6s ease-in-out infinite}
+@keyframes glowp{50%{opacity:.7}}
+.bnc{animation:bnc .45s ease-in-out infinite alternate}
+@keyframes bnc{to{transform:translateY(-12px)}}
+.zzz{animation:zzz 2.4s ease-in-out infinite}
+@keyframes zzz{0%{opacity:0;transform:translateY(2px)}50%{opacity:1}100%{opacity:0;transform:translateY(-4px)}}
+.pulse{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.2}}
+.cloud{animation:drift 80s linear infinite}
+.c2{animation:drift2 120s linear infinite;animation-delay:-60s}
+@keyframes drift{from{transform:translate(-40px,-22px)}to{transform:translate(420px,-22px)}}
+@keyframes drift2{from{transform:translate(-40px,-34px)}to{transform:translate(420px,-34px)}}
+.pigeon{animation:pigeon 16s ease-in-out infinite}
+@keyframes pigeon{0%,100%{transform:translate(232px,13.3px)}45%,55%{transform:translate(282px,24.5px)}}
+.ballrun{animation:ball 3s ease-in-out infinite}
+@keyframes ball{0%,100%{transform:translate(112px,46px)}30%{transform:translate(128px,40px)}60%{transform:translate(138px,49px)}}
+.hop{animation:hop .6s ease-in-out infinite alternate}
+@keyframes hop{to{transform:translateY(-2px)}}
+.mow .mbody{animation:mow 2s ease-in-out infinite alternate}
+@keyframes mow{from{transform:translateX(-22px)}to{transform:translateX(4px)}}
+.bub{animation:pop .25s ease-out}
+.ringing .bellr{transform-box:fill-box;transform-origin:50% 0;animation:ringb .25s ease-in-out infinite alternate}
+@keyframes ringb{from{transform:rotate(-22deg)}to{transform:rotate(22deg)}}
+.note{animation:note 1.4s ease-in-out infinite}.n2{animation-delay:.45s}.n3{animation-delay:.9s}
+@keyframes note{0%{opacity:0;transform:translateY(3px)}40%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
+@keyframes pop{from{opacity:0;transform:translateY(3px)}}
+
+/* Seitenleiste */
+.side{display:flex;flex-direction:column;gap:6px;flex:none;min-height:0}
+.log{background:var(--plan);border-radius:12px;padding:7px 10px;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;min-height:3.7em;line-height:1.3;font-size:.8rem}
+.log p{margin:0;display:flex;gap:6px}
+.log p i{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;font-size:.72rem;padding-top:1px}
+.log p:not(:last-child){opacity:.55;font-size:.74rem}
+.log p.warn{color:var(--lamp);opacity:1}
+.log p.bad{color:var(--alarm)}
+.log p.good{color:var(--good)}
+.log p.hint{color:var(--screen)}
+.duty{display:flex;flex-wrap:wrap;gap:4px}
+.duty span{font-size:.68rem;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted)}
+.duty span.ok{background:var(--good);border-color:var(--good);color:var(--wall)}
+.duty span.late{background:var(--alarm);border-color:var(--alarm);color:var(--wall)}
+.duty span.free{background:var(--screen);border-color:var(--screen);color:var(--wall)}
+.tip{margin:0;background:#342d4f;border:1px solid var(--lamp);border-radius:10px;padding:5px 9px;font-size:.74rem;line-height:1.3}
+.tip b{color:var(--lamp)}
+.tip i{font-style:normal;color:var(--screen);font-weight:800}
+.col{display:flex;flex-direction:column;gap:5px;min-width:0}
+.col .log{flex:1}
+.goals{display:flex;flex-wrap:wrap;gap:4px}
+.zoomed .goals span{font-size:.6rem;padding:1px 6px}
+.goals span{font-size:.66rem;font-weight:800;border:1px dashed var(--lamp);color:var(--lamp);border-radius:999px;padding:2px 8px}
+.goals span.ok{background:var(--lamp);color:var(--wall);border-style:solid}
+.act.rec{border-color:var(--lamp)!important;background:#3a3157}
+.act.rec .n::before{content:"★ ";color:var(--lamp)}
+.act.risk-green{box-shadow:inset 4px 0 0 var(--good)}
+.act.risk-yellow{box-shadow:inset 4px 0 0 var(--lamp)}
+.act.risk-red{box-shadow:inset 4px 0 0 var(--alarm)}
+.achlist{display:flex;flex-direction:column;gap:6px}
+.ach{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:center;background:var(--wall);border-radius:10px;padding:7px 10px}
+.ach i{font-style:normal;font-size:1.1rem;color:var(--lamp);text-align:center}
+.ach b{display:block;font-size:.86rem}
+.ach small{display:block;color:var(--muted);font-size:.72rem;line-height:1.3}
+.ach.off{opacity:.45}
+#start .row .btn{text-align:center}
+.hereline{font-size:.72rem;color:var(--muted);font-weight:700;margin:0;line-height:1.35}
+.hereline b{color:var(--alarm)}
+#actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:34vh;overflow:auto;padding-bottom:2px}
+.act{display:grid;grid-template-columns:1fr auto;grid-template-areas:"n c" "d d";column-gap:6px;row-gap:2px;align-items:start;background:var(--plan);border:1px solid transparent;border-radius:10px;padding:6px 6px 7px 9px;text-align:left;cursor:pointer;min-width:0;transition:transform .12s}
+.act:active{transform:scale(.97)}
+.act:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
+.act .n{grid-area:n;font-size:.8rem;font-weight:800;line-height:1.2;align-self:center;min-width:0}
+.act .d{grid-area:d;font-size:.68rem;line-height:1.25;color:var(--muted)}
+.act .c{grid-area:c;border-radius:999px;padding:3px 8px;font-family:var(--display);font-weight:700;font-size:.78rem;background:var(--lamp);color:var(--wall);white-space:nowrap}
+.act.media{border-color:rgba(127,227,255,.45)}
+.act.media .c{background:var(--screen)}
+.act.safe .c{background:var(--good)}
+
+/* Modal */
+.modal{position:fixed;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center;padding-left:16px;padding-right:16px;background:rgba(29,26,43,.8);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);z-index:10}
+.sheet{max-width:420px;width:100%;max-height:90%;overflow-y:auto;background:var(--plan);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.sheet h3{font-family:var(--display);font-size:1.6rem;margin:0;color:var(--alarm);line-height:1.05;text-wrap:balance}
+.sheet h3.calm{color:var(--lamp);font-size:1.25rem}
+.say{display:flex;gap:10px;align-items:center;background:var(--wall);border-radius:12px;padding:10px 12px}
+.say svg{width:52px;height:52px;flex:none;display:block}
+.say p{margin:0;font-size:.95rem;line-height:1.45;font-weight:700}
+.choice{display:flex;flex-direction:column;gap:8px}
+.btn{display:block;width:100%;text-align:left;font-weight:800;font-size:.86rem;border:1px solid var(--line);background:transparent;border-radius:12px;padding:10px 14px;cursor:pointer}
+.btn small{display:block;font-weight:700;color:var(--muted);font-size:.72rem;margin-top:2px}
+.btn:hover,.btn:focus-visible{border-color:var(--lamp);outline:none}
+.btn.go{background:var(--lamp);color:var(--wall);border-color:var(--lamp)}
+.btn.go small{color:var(--wall);opacity:.75}
+#end{justify-content:center}
+#end .sheet{margin:0 auto}
+#end h3{color:var(--lamp)}
+.stat{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.9rem}
+.stat td{padding:3px 0;border-bottom:1px solid var(--line)}
+.stat td:last-child{text-align:right;font-weight:800}
+.stat tr.sum td{border:0;font-family:var(--display);font-size:1.2rem;color:var(--good);padding-top:6px}
+.row{display:flex;gap:8px}
+.row .btn{flex:1}
+.rec{margin:0;color:var(--muted);font-size:.78rem;font-weight:700}
+
+@media (orientation:landscape) and (min-width:700px){
+  .app{max-width:1280px}
+  .main{flex-direction:row}
+  .planwrap{flex:1.25}
+  .side{flex:1;overflow:auto}
+  #actions{max-height:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .fg{transition:none}
+  .ringing .bellr,.note,.tailw,.puff,.sqt,.ear,.sway,.sway2,.steam,.smoke,.blink,.glowp,.bnc,.zzz,.pulse,.cloud,.c2,.pigeon,.ballrun,.hop,.mow .mbody,.bub,.fg .body.walk{animation:none}
+}
+
+/* Switch / alte Browser */
+.app>*+*{margin-top:7px}
+.main>*+*{margin-top:7px}
+.side>*+*{margin-top:6px}
+.col>*+*{margin-top:5px}
+.minirow>*+*{margin-top:6px}
+.log>*+*{margin-top:3px}
+.duty>*,.goals>*{margin:0 4px 4px 0}
+.row>*+*{margin-left:8px}
+.fig>*+*{margin-top:6px}
+.fig .tp>*+*{margin-left:9px}
+.say>*+*{margin-left:10px}
+.choice>*+*{margin-top:8px}
+.sus>*+*{margin-top:4px}
+.sus .lbl>*+*{margin-left:6px}
+.log p>*+*{margin-left:6px}
+.figs,#actions,.top,.rooms{grid-gap:8px}
+#actions{grid-gap:6px}
+.top{grid-column-gap:10px}
+.achlist>*+*{margin-top:6px}
+.ach{grid-gap:8px}
+@media (min-aspect-ratio:4/3) and (min-width:800px){
+  html,body{height:100%}
+  body{font-size:16px}
+  .app{max-width:none;height:100vh;padding:8px 14px}
+  .main{flex-direction:row}
+  .main>*+*{margin-top:0;margin-left:12px}
+  .planwrap{flex:1.35 1 0%;height:100%;min-height:0}
+  .side{flex:1 1 0%;overflow:auto;height:100%}
+  #actions{max-height:none}
+  .zoombtn{display:none}
+  #start{max-width:900px}
+}
+</style>
+
+<div id="start" class="app">
+  <div><h1 class="logo">Family <span>Chaos</span></h1><p class="sub">Samstag, 14 bis 21 Uhr. Wer zockt, wer erwischt?</p></div>
+  <div class="figs" id="figs"></div>
+  <div class="row"><button class="btn" id="howto">Anleitung<small>3 kurze Karten</small></button><button class="btn" id="achbtn">Erfolge &amp; Rekorde<small id="achcount"></small></button></div>
+  <div class="rules">
+    <p><b>Als T oder M:</b> Switch und Fernseher stehen im Wohnzimmer. Handys habt ihr keine, aber Papa und Mama lassen ihre ja gern mal im Sessel liegen. Sammle Spaß und lass keine Spuren liegen. Hausaufgaben, Katzen füttern und Abendessen um 18:30 nicht vergessen. Bei 100 % Verdacht ist alles weg.</p>
+    <p><b>Als Papa oder Mama:</b> Haushalt schaffen und die Kinder vor dem Bildschirm erwischen. Jeder Gang durchs Haus kostet 15 Minuten. Bei 100 % Stress eskaliert der Abend.</p>
+    <p>Neu: Switch unter der Bettdecke (Akku!), YouTube auf Mamas iPad, Nachbarin N und Nachbar F an der Tür, Tagesziele, Erfolge, Tipps und eine Ampel pro Raum.</p>
+    <p>Samstag ist Aufräumtag: Überall liegt Lego, und Papa und Mama treten ständig rein. Bis 18 Uhr müssen die Kinderzimmer legofrei sein, dann ist Kontrolle.</p>
+    <p>Es klingelt den halben Tag: Freunde von T und M kommen vorbei und verschwinden in den Kinderzimmern. Papa und Mama finden das … anstrengend.</p>
+    <p>Nia, Nelli, Nala und Mogli laufen frei herum. Sie lieben warme Geräte und maunzen, wenn jemand kommt. Meistens jedenfalls. Nala eher nicht.</p>
+  </div>
+</div>
+
+<div id="game" class="app" hidden>
+  <div class="top">
+    <div class="av" id="av"></div>
+    <div class="clock" id="clock"></div>
+    <div class="sus"><div class="lbl"><span id="barlbl">Verdacht</span><b id="barval"></b></div><div class="bar"><div id="fill"></div></div><div class="mstat" id="mstat"></div></div>
+    <div class="score" id="score"></div>
+  </div>
+  <div class="main">
+    <div class="planwrap"><div class="plan" id="plan"></div><button class="zoombtn" id="zoom" aria-label="Ganzes Haus zeigen"></button></div>
+    <div class="side">
+      <div class="rooms" id="rooms" aria-label="Räume"></div>
+      <div class="minirow"><div class="minihost" id="minihost"></div><div class="col"><div class="goals" id="goals"></div><div class="log" id="msgs" aria-live="polite"></div></div></div>
+      <p class="tip" id="tip"></p>
+      <div class="duty" id="duty"></div>
+      <p class="hereline" id="hint"></p>
+      <div id="actions"></div>
+    </div>
+  </div>
+</div>
+
+<div id="end" class="app" hidden><div class="sheet" id="endbox"></div></div>
+<div class="modal" id="dlg" hidden><div class="sheet" id="dlgbox" role="dialog" aria-modal="true"></div></div>
+
+<script>
+(function() {
+  var ORDER = ["kt", "km", "wz", "ku", "ga"];
+  var ROOMS = { kt: "Zimmer T", km: "Zimmer M", wz: "Wohnzimmer", ku: "Küche", ga: "Garten" };
+  var IN = { kt: "in Zimmer T", km: "in Zimmer M", wz: "ins Wohnzimmer", ku: "in die Küche", ga: "in den Garten" };
+  var IM = { kt: "in Zimmer T", km: "in Zimmer M", wz: "im Wohnzimmer", ku: "in der Küche", ga: "im Garten" };
+  var NAME = { S: "Papa", R: "Mama", T: "T", M: "M" };
+  var END = 420;
+  var FIG = {
+    S: { role: "S", mode: "parent", blurb: "Fußball im Sessel, gern mit Nickerchen. Das Handy ist immer dabei." },
+    R: { role: "R", mode: "parent", blurb: "Küche, Wäsche, Putzen. Und zwischendurch doch mal kurz ans Handy." },
+    T: { role: "11 Jahre", mode: "kid", own: "kt", sib: "M", blurb: "Marvel-Fan, Lego-Baumeister und Schlagzeuger. Eichhörnchen Wanders hält Wache." },
+    M: { role: "9 Jahre", mode: "kid", own: "km", sib: "T", blurb: "Star Wars, Schach, Fußball und Gitarre. Kennt jedes Gameplay-Video auf YouTube." }
+  };
+  var CATS = [{ n: "Nia", col: "#ff8fb1" }, { n: "Nelli", col: "#e8473c" }, { n: "Nala", col: "#ffd34d" }, { n: "Mogli", col: "#3aa0e8" }];
+  var SCHED = {
+    S: [[0, "wz", "macht ein Nickerchen im Sessel", "sleep"], [60, "wz", "schaut Fußball im Sessel", "tv"], [120, "ga", "mäht widerwillig den Rasen"], [165, "wz", "sitzt im Sessel am Handy", "phone"], [210, null, "holt Grillkohle"], [240, "ga", "grillt"], [270, "ku", "sitzt beim Essen"], [300, "wz", "schaut mit Mama eine Serie, Nelli auf dem Schoß", "tv"]],
+    R: [[0, "ku", "macht die Küche, Hörbuch im Ohr", "book"], [45, "wz", "saugt das Wohnzimmer"], [75, "ku", "wischt den Küchenboden, Hörbuch im Ohr", "book"], [105, "ga", "hängt Wäsche auf"], [150, "wz", "sitzt kurz im Sessel am Handy", "phone"], [180, null, "geht einkaufen"], [225, "ku", "kocht und schaut nebenbei Serie auf dem iPad", "ipad"], [270, "ku", "sitzt beim Essen"], [300, "wz", "schaut mit Papa eine Serie", "tv"]]
+  };
+  var TASKS = {
+    S: [{ l: "Fußball schauen", room: "wz", ticks: 2, due: 120 }, { l: "Rasen mähen", room: "ga", ticks: 2, due: 210 }, { l: "Katzen füttern", room: "ku", ticks: 1, due: 240 }, { l: "Grillen", room: "ga", ticks: 2, due: 270, dinner: true }],
+    R: [{ l: "Küche machen", room: "ku", ticks: 2, due: 90 }, { l: "Wohnzimmer saugen", room: "wz", ticks: 1, due: 150 }, { l: "Wäsche aufhängen", room: "ga", ticks: 1, due: 210 }, { l: "Kochen", room: "ku", ticks: 2, due: 270, dinner: true }]
+  };
+  var KID_ACTS = {
+    sw1: { l: "Switch: Minecraft", d: "15 min · Spaß +2", ticks: 1, fun: 2, media: "Switch", spur: ["warme Switch", "Joy-Con auf dem Sofa"], sp: 0.6 },
+    sw2: { l: "Minecraft-Marathon", d: "30 min · Spaß +5", ticks: 2, fun: 5, media: "Switch", spur: ["warme Switch", "Joy-Con auf dem Sofa", "leere Saftflasche"], sp: 0.8 },
+    yt: { l: "YouTube: Gameplay", d: "30 min · Spaß +4", ticks: 2, fun: 4, media: "Fernseher", spur: ["warme Fernbedienung", "Decke am Boden"], sp: 0.7 },
+    rober: { l: "YouTube: Mark Rober", d: "15 min · Spaß +2 · gute Ausrede", ticks: 1, fun: 2, media: "Fernseher", edu: true, spur: ["warme Fernbedienung"], sp: 0.5 },
+    grab: { l: "Elternhandy schnappen", d: "15 min · liegt im Sessel", ticks: 1, task: "grab" },
+    phone: { l: "YouTube am Elternhandy", d: "15 min · Spaß +3", ticks: 1, fun: 3, media: "Handy", spur: ["Handy unterm Kissen"], sp: 0.2 },
+    back: { l: "Handy zurücklegen", d: "15 min · in den Sessel", ticks: 1, task: "back", safe: true },
+    comic: { l: "Marvel-Comic lesen", d: "15 min · Spaß +1 · Alibi", ticks: 1, fun: 1, task: "alibi", safe: true },
+    lego: { l: "Lego bauen", d: "15 min · Spaß +2 · Alibi, aber Steine", ticks: 1, fun: 2, task: "alibi", safe: true, spur: ["Legosteine am Boden"], sp: 0.6 },
+    drum: { l: "Schlagzeug spielen", d: "15 min · Spaß +2 · laut, aber Alibi", ticks: 1, fun: 2, task: "alibi", safe: true, noise: true },
+    guitar: { l: "Gitarre üben", d: "15 min · Spaß +2 · Alibi", ticks: 1, fun: 2, task: "alibi", safe: true, noise: true },
+    kick: { l: "Fußball spielen", d: "15 min · Spaß +1 · gutes Alibi", ticks: 1, fun: 1, task: "alibi", safe: true },
+    chess: { l: "Schach spielen", d: "15 min · Spaß +1 · Alibi", ticks: 1, fun: 1, task: "alibi", safe: true },
+    wanders: { l: "Wanders verstecken", d: "15 min · Spaß +2 · T wird sauer", ticks: 1, fun: 2, task: "wanders" },
+    visit: { l: "Mit Besuch spielen", d: "15 min · Spaß +3 · Alibi", ticks: 1, fun: 3, task: "alibi", safe: true },
+    undock: { l: "Switch aus dem Dock nehmen", d: "15 min · für unter die Bettdecke", ticks: 1, task: "undock" },
+    dock: { l: "Switch zurück ins Dock", d: "15 min · lädt wieder", ticks: 1, task: "dock", safe: true },
+    blanket: { l: "Unter der Bettdecke zocken", d: "15 min · Spaß +3 · gut versteckt", ticks: 1, fun: 3, media: "Switch", hide: 0.55, spur: ["warme Switch"], sp: 0.2 },
+    charge: { l: "Switch am Kabel laden", d: "15 min · Akku +50", ticks: 1, task: "charge", safe: true },
+    getcable: { l: "Ladekabel mitnehmen", d: "0 min · liegt hier!", ticks: 0, task: "getcable", safe: true },
+    ipad: { l: "YouTube auf Mamas iPad", d: "15 min · Spaß +3", ticks: 1, fun: 3, media: "iPad", spur: ["iPad-Verlauf voller Gameplay"], sp: 0.5 },
+    snack: { l: "Snacks holen", d: "15 min · Spaß +1", ticks: 1, fun: 1, spur: ["Chipskrümel", "offene Keksdose"], sp: 1 },
+    feed: { l: "Katzen füttern", d: "15 min · Pflicht", ticks: 1, task: "feed", safe: true },
+    movie: { l: "Filmabend mitschauen", d: "15 min · Spaß +3 · erlaubt!", ticks: 1, fun: 3, task: "movie", safe: true },
+    hw: { l: "Hausaufgaben", d: "30 min · Pflicht", ticks: 2, task: "hw", safe: true },
+    tidy: { l: "Aufräumen", d: "15 min · bis zu 2 Spuren weg", ticks: 1, task: "tidy", safe: true },
+    tramp: { l: "Trampolin", d: "15 min · gutes Alibi", ticks: 1, fun: 1, task: "alibi", safe: true },
+    cat: { l: "Katze anlocken", d: "15 min · warnt besser", ticks: 1, fun: 1, task: "cat" },
+    wait: { l: "Unauffällig rumstehen", d: "15 min", ticks: 1 }
+  };
+  var CATCH_LINES = ["Wie lange läuft das schon?", "Ich zähl bis drei.", "Das Ding glüht ja noch!", "Sind die Hausaufgaben fertig?", "Und das am helllichten Tag.", "Ich hab doch gesagt: erst Hausaufgaben."];
+  var FIND_LINES = ["Wer war das?", "Das räumt sich nicht von allein weg.", "Ich sag nichts. Ich guck nur.", "Warum ist das hier warm?", "Das hatten wir doch besprochen."];
+  var KID_LINES = ["Das ist Mark Rober! Da lernen wir was über Technik und das Leben.", "Minecraft ist voll kreativ, das ist wie Lego!", "Nur noch bis zum Speicherpunkt!", "{sib} durfte gestern viel länger!", "Nala ist auf die Fernbedienung getreten!", "Du sitzt doch auch dauernd am Handy!"];
+  var BANTER = [["R", "Komm, mach mal mit im Haushalt!"], ["S", "Oh nee, ich hab meine Ruhe."]];
+  var G = null;
+  function $(id) {
+    return document.getElementById(id);
+  }
+  function rnd() {
+    return Math.random();
+  }
+  function pick(a) {
+    return a[Math.floor(rnd() * a.length)];
+  }
+  function clamp(v, a, b) {
+    return Math.max(a, Math.min(b, v));
+  }
+  function wpick(w) {
+    var tot = 0, k;
+    for (k in w) tot += w[k];
+    var x = rnd() * tot;
+    for (k in w) {
+      if (w[k] <= 0) continue;
+      x -= w[k];
+      if (x < 0) return k;
+    }
+    for (k in w) if (w[k] > 0) return k;
+    return "wz";
+  }
+  function clock(t) {
+    var m = 840 + t;
+    return Math.floor(m / 60) + ":" + ("0" + m % 60).slice(-2);
+  }
+  function base(p, t) {
+    if (p === "S" && G && G.tennis && t >= 165 && t < 225) return [165, null, "ist beim Tennis"];
+    var s = SCHED[p], r = s[0];
+    for (var i = 0; i < s.length; i++) if (t >= s[i][0]) r = s[i];
+    return r;
+  }
+  function inCall() {
+    return !!(G.call && G.t < G.call);
+  }
+  function startCall(len, sleep) {
+    G.callDone = true;
+    G.call = G.t + len;
+    G.callSleep = sleep;
+    G.callEnded = false;
+    G.pos.R = G.mode === "parent" && G.who === "R" ? G.pos.R : "ga";
+    if (sleep) G.pos.S = G.mode === "parent" && G.who === "S" ? G.pos.S : "wz";
+  }
+  function checkCallEnd() {
+    if (G.call && !G.callEnded && G.t >= G.call) {
+      G.callEnded = true;
+      log("Mama legt auf. „Ja, ich ruf dich morgen wieder an!“ Die Freifahrt ist vorbei.", "warn");
+    }
+  }
+  function pstate(p) {
+    if (G.mode === "parent" && p === G.who) return G.meState || "";
+    if (G.chat && G.chat.p === p && G.t < G.chat.until && G.pos[p] === "ga") return "chat";
+    if (inCall()) {
+      if (p === "R") return "call";
+      if (p === "S" && G.callSleep && G.pos.S === "wz") return "sleep";
+    }
+    var b = base(p, G.t), st = G.pos[p] && G.pos[p] === b[1] ? b[3] || "" : "";
+    if (st === "sleep" && p === "S" && G.sAwake) st = "";
+    return st;
+  }
+  function awake(p) {
+    var s = pstate(p);
+    return s !== "sleep" && s !== "call" && s !== "chat";
+  }
+  function catsIn(r) {
+    return CATS.filter(function(c) {
+      return G.cats[c.n] === r;
+    });
+  }
+  function log(txt, cls) {
+    G.log.push({ t: clock(G.t), txt, cls: cls || "" });
+    if (G.log.length > 40) G.log.shift();
+  }
+  function addSpur(r, n) {
+    if (G.spuren[r].length < 4 && G.spuren[r].indexOf(n) < 0) G.spuren[r].push(n);
+  }
+  function totalSpuren() {
+    var n = 0;
+    ORDER.forEach(function(r) {
+      n += G.spuren[r].length;
+    });
+    return n;
+  }
+  function devDat(d) {
+    return { iPad: "an Mamas iPad", Handy: "am Elternhandy", Switch: "an der Switch", Fernseher: "vor YouTube" }[d] || "am Bildschirm";
+  }
+  function warmSpur(d) {
+    return { iPad: "warmes iPad", Handy: "warmes Handy", Switch: "warme Switch", Fernseher: "warme Fernbedienung" }[d];
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function(c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function show(id) {
+    ["start", "game", "end"].forEach(function(s) {
+      $(s).hidden = s !== id;
+    });
+  }
+  function store(k, v) {
+    try {
+      if (v === void 0) return JSON.parse(localStorage.getItem(k) || "null");
+      localStorage.setItem(k, JSON.stringify(v));
+    } catch (e) {
+      return null;
+    }
+  }
+  var INK = "#2a2235", SKIN = "#f2c9a8";
+  var LOOK = {
+    S: { hair: "#3b3a40", style: "short", extra: "grey", shirt: "#2f6fd0", pants: "#3d4a66", shoe: "#e9e3d6", bg: "#7fc8ff" },
+    R: { hair: "#6b4428", style: "long", shirt: "#ff9fc4", pants: "#4a5a8a", shoe: "#f3eefa", bg: "#ffc2d6" },
+    T: { hair: "#7a4b28", style: "short", extra: "messy", shirt: "#d8343a", pants: "#2f4a6b", shoe: "#3aa0e8", print: "comic", bg: "#ffa27f" },
+    M: { hair: "#b08355", style: "short", extra: "part", shirt: "#1d2450", pants: "#55606e", shoe: "#e8453c", print: "space", head: 1.22, bg: "#aab4ff" }
+  };
+  var LONGBACK = "M-11.6 -2 Q-12.8 12 -11.8 23 Q-6 25 0 23 Q6 25 11.8 23 Q12.8 12 11.6 -2Z";
+  function headSVG(L, o) {
+    o = o || {};
+    var s = '<circle cx="-9.8" cy=".8" r="2" fill="' + SKIN + '"/><circle cx="9.8" cy=".8" r="2" fill="' + SKIN + '"/><circle cx="0" cy="0" r="10" fill="' + SKIN + '"/>';
+    if (L.extra === "grey") s += '<path d="M-7 4 Q0 12.5 7 4 Q0 9 -7 4Z" fill="#3b3a40" opacity=".18"/>';
+    if (L.style === "long") s += '<path d="M-11 2.6 Q-12 -13 0 -13 Q12 -13 11 2.6 Q9.4 -5.6 2.6 -7.6 Q-1.4 -3.6 -11 2.6Z" fill="' + L.hair + '"/>';
+    else s += '<path d="M-10.6 1.4 Q-11.6 -12.6 0 -12.6 Q11.6 -12.6 10.6 1.4 Q8 -6 1.4 -6.4 Q-6.8 -6 -10.6 1.4Z" fill="' + L.hair + '"/>';
+    if (L.extra === "messy") s += '<path d="M-4 -11.6 l-2.2 -4.2 3.6 2 1.4 -4.2 1.8 4 3.4 -2.2 -1.4 4.4z" fill="' + L.hair + '"/>';
+    if (L.extra === "grey") s += '<path d="M-8 -5 q3 -4.4 7 -5.2 M3 -10.4 q4 .8 6.2 4.8" stroke="#a3a7b0" stroke-width=".9" fill="none"/>';
+    if (L.extra === "part") s += '<path d="M3.4 -12.4 q-1.2 4 -4.6 6.2" stroke="#8f6a42" stroke-width=".9" fill="none"/>';
+    if (o.zzz) s += '<path d="M-5.6 .8 q1.8 1.2 3.6 0 M2 .8 q1.8 1.2 3.6 0" stroke="' + INK + '" stroke-width=".9" fill="none"/>';
+    else s += '<circle cx="-3.7" cy=".4" r="1.35" fill="' + INK + '"/><circle cx="3.7" cy=".4" r="1.35" fill="' + INK + '"/>';
+    if (!L.noGlasses) s += '<g fill="none" stroke="' + INK + '" stroke-width="1.05"><circle cx="-3.8" cy=".3" r="3.3"/><circle cx="3.8" cy=".3" r="3.3"/><path d="M-.5 .1h1M-7.1 -.2l-2.6 -.9M7.1 -.2l2.6 -.9"/></g>';
+    if (!L.noGlasses) s += '<path d="M-5.6 -1.4 q1 -1.2 2.2 -1.2 M2 -1.4 q1 -1.2 2.2 -1.2" stroke="#fff" stroke-width=".6" fill="none" opacity=".6"/>';
+    s += '<circle cx="-6.6" cy="4" r="1.8" fill="#ff9fb4" opacity=".55"/><circle cx="6.6" cy="4" r="1.8" fill="#ff9fb4" opacity=".55"/>';
+    if (o.talk) s += '<ellipse cx="0" cy="5.4" rx="1.7" ry="1.4" fill="' + INK + '"/>';
+    else if (o.zzz) s += '<path d="M-1.6 5.4h3.2" stroke="' + INK + '" stroke-width="1" stroke-linecap="round"/>';
+    else s += '<path d="M-2.6 4.6 q2.6 2.2 5.2 0" stroke="' + INK + '" stroke-width="1.15" fill="none" stroke-linecap="round"/>';
+    if (o.hp) s += '<path d="M-11.4 0 Q-11.6 -15.6 0 -15.6 Q11.6 -15.6 11.4 0" stroke="' + INK + '" stroke-width="1.8" fill="none"/><rect x="-14" y="-3.4" width="4.6" height="7.6" rx="2.2" fill="#e8453c"/><rect x="9.4" y="-3.4" width="4.6" height="7.6" rx="2.2" fill="#e8453c"/>';
+    return s;
+  }
+  var PRINT = {
+    comic: '<path d="M0 -24 l1.2 2.4 2.6 -.8 -1 2.4 2.2 1.4 -2.6 .5 .3 2.6 -2.1 -1.6 -2.1 1.6 .3 -2.6 -2.6 -.5 2.2 -1.4 -1 -2.4 2.6 .8z" fill="#ffd34d" stroke="' + INK + '" stroke-width=".4"/>',
+    space: '<circle cx="0" cy="-19.4" r="2.4" fill="#e8b84a"/><ellipse cx="0" cy="-19.4" rx="4.4" ry="1.1" fill="none" stroke="#fff" stroke-width=".55"/><circle cx="-4" cy="-23" r=".45" fill="#fff"/><circle cx="4.2" cy="-22.4" r=".45" fill="#fff"/><circle cx="-3" cy="-15" r=".4" fill="#fff"/>'
+  };
+  var DEV = {
+    phone: '<rect class="glowp" x="-2.4" y="-21.6" width="4.8" height="7" rx="1" fill="#7fe3ff" stroke="' + INK + '" stroke-width=".6"/>',
+    pad: '<rect x="-6" y="-19" width="12" height="4.6" rx="2.2" fill="#2a2a33"/><rect x="-6" y="-19" width="2.8" height="4.6" rx="1.3" fill="#e8453c"/><rect x="3.2" y="-19" width="2.8" height="4.6" rx="1.3" fill="#3aa0e8"/>',
+    remote: '<rect x="-1.4" y="-21" width="2.8" height="7" rx="1" fill="' + INK + '"/><circle cx="0" cy="-19.6" r=".6" fill="#e8453c"/>',
+    tablet: '<rect class="glowp" x="-5.4" y="-22.4" width="10.8" height="7.6" rx="1.2" fill="#7fe3ff" stroke="' + INK + '" stroke-width=".7"/>',
+    book: '<path d="M-6 -19 l6 1.4 6 -1.4 v5 l-6 1.4 -6 -1.4z" fill="#fff" stroke="#a79fbe" stroke-width=".5"/><path d="M0 -17.6 v5" stroke="#a79fbe" stroke-width=".5"/>',
+    sticks: '<path d="M-3 -16.6 l7 -5 M3 -16.6 l8 -2" stroke="#e3c06a" stroke-width="1.1" stroke-linecap="round"/>',
+    guitar: '<g transform="rotate(-28 0 -16)"><rect x="1" y="-17" width="13" height="1.8" fill="#6b4126"/><rect x="13" y="-17.6" width="3.4" height="3" rx=".6" fill="#3b2a20"/><circle cx="-2" cy="-16.1" r="4" fill="#c97a3e"/><circle cx="-5.6" cy="-16.1" r="4.8" fill="#c97a3e"/><circle cx="-2.6" cy="-16.1" r="1.2" fill="' + INK + '"/></g>',
+    brick: '<rect x="-3" y="-19" width="6" height="3.4" rx=".5" fill="#e8453c"/><rect x="-2.2" y="-20" width="1.6" height="1.1" fill="#e8453c"/><rect x=".6" y="-20" width="1.6" height="1.1" fill="#e8453c"/>'
+  };
+  function figSVG(k, o) {
+    var L = o.look || LOOK[k], kid = o.look ? !o.adult : FIG[k].mode === "kid", hs = L.head || 1, sh = L.shirt, s = "", sit = o.pose === "sit";
+    var arm = function(d) {
+      return '<path d="' + d + '" stroke="' + sh + '" stroke-width="2.8" fill="none" stroke-linecap="round"/>';
+    };
+    var hand = function(x, y) {
+      return '<circle cx="' + x + '" cy="' + y + '" r="1.5" fill="' + SKIN + '"/>';
+    };
+    s += '<ellipse cx="' + (sit ? 2 : 0) + '" cy="0" rx="8" ry="2.2" fill="#000" opacity=".3"/><g class="body">';
+    if (sit) s += '<rect x="-4.6" y="-15.2" width="12.6" height="4.4" rx="2.1" fill="' + L.pants + '"/><rect x="4.4" y="-13.4" width="3.8" height="13" rx="1.9" fill="' + L.pants + '"/><ellipse cx="7.6" cy="-.6" rx="2.9" ry="1.4" fill="' + L.shoe + '"/>';
+    else s += '<rect x="-4.6" y="-13" width="3.8" height="13" rx="1.9" fill="' + L.pants + '"/><rect x=".8" y="-13" width="3.8" height="13" rx="1.9" fill="' + L.pants + '"/><ellipse cx="-2.9" cy="-.6" rx="2.7" ry="1.4" fill="' + L.shoe + '"/><ellipse cx="2.9" cy="-.6" rx="2.7" ry="1.4" fill="' + L.shoe + '"/>';
+    var hy = -26 - 7.4 * hs, ht = "translate(0 " + hy.toFixed(2) + ") scale(" + (0.74 * hs).toFixed(3) + ")";
+    if (L.style === "long") s += '<g transform="' + ht + '"><path d="' + LONGBACK + '" fill="' + L.hair + '"/></g>';
+    s += '<path d="M-7 -12 Q-8 -26 0 -26 Q8 -26 7 -12Z" fill="' + sh + '"/>' + (PRINT[L.print] || "");
+    if (o.hold === "call") s += arm("M-6.4 -23 Q-10.5 -18 -8.6 -13") + hand(-8.6, -12.6) + arm("M6.4 -23 Q11 -26 8.4 " + (hy + 1).toFixed(1));
+    else if (o.hold) s += arm("M-6.4 -23 Q-9 -16 -3 -16.6") + arm("M6.4 -23 Q9 -16 3 -16.6") + DEV[o.hold] + hand(-3, -16.6) + hand(3, -16.6);
+    else s += arm("M-6.4 -23 Q-10.5 -18 -8.6 -13") + arm("M6.4 -23 Q10.5 -18 8.6 -13") + hand(-8.6, -12.6) + hand(8.6, -12.6);
+    s += '<g transform="' + ht + '">' + headSVG(L, o) + "</g>";
+    if (o.hold === "call") s += '<rect x="' + (5.6 * hs).toFixed(1) + '" y="' + (hy - 3.6).toFixed(1) + '" width="3.4" height="6.4" rx=".8" fill="' + INK + '"/><rect class="glowp" x="' + (6.1 * hs).toFixed(1) + '" y="' + (hy - 3).toFixed(1) + '" width="2.4" height="5" fill="#7fe3ff"/>';
+    if (o.zzz) s += '<text class="zzz" x="6" y="' + (hy - 9).toFixed(1) + '" font-family="Fredoka,sans-serif" font-weight="700" font-size="7" fill="#c9a2ff">Zzz</text>';
+    s += "</g>";
+    return '<g transform="scale(' + (kid ? 0.9 : 1.08) + ')">' + s + "</g>";
+  }
+  var AVN = 0;
+  function friendLook() {
+    return { hair: pick(["#2b2420", "#e0b45a", "#8a4a1e", "#c96b3a", "#5a3a28"]), style: pick(["short", "short", "long"]), extra: pick(["messy", "part", ""]), shirt: pick(["#7fd48a", "#ffb347", "#9b6bd6", "#3ac0b0", "#ff8fb1", "#f2f2f2"]), pants: pick(["#3d4a66", "#55606e", "#4a5a8a", "#6b4b3e"]), shoe: pick(["#fff", "#e8453c", "#ffd34d", "#2a2235"]), noGlasses: true };
+  }
+  function avatar(k) {
+    var L = LOOK[k], hs = L.head ? 1.1 : 1, id = "avc" + ++AVN;
+    var s = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><clipPath id="' + id + '"><circle cx="20" cy="20" r="20"/></clipPath></defs><g clip-path="url(#' + id + ')"><rect width="40" height="40" fill="' + L.bg + '"/>';
+    var ht = "translate(20 " + (23 + (hs - 1) * 5).toFixed(1) + ") scale(" + (1.12 * hs).toFixed(3) + ")";
+    if (L.style === "long") s += '<g transform="' + ht + '"><path d="' + LONGBACK + '" fill="' + L.hair + '"/></g>';
+    s += '<path d="M3 42 Q5 31 20 31 Q35 31 37 42Z" fill="' + L.shirt + '"/>';
+    if (L.print) s += '<g transform="translate(20 55) scale(.8)">' + PRINT[L.print] + "</g>";
+    s += '<g transform="' + ht + '">' + headSVG(L, {}) + "</g></g></svg>";
+    return s;
+  }
+  function catSVG(c, mode) {
+    var f = "#d9dce1", o = "#8d929b", s = '<ellipse cx="1" cy="0" rx="7" ry="1.6" fill="#000" opacity=".25"/>';
+    if (mode === "sleep") {
+      return s + '<path d="M6 -1.5 Q10.5 -1 9.4 -4.4" stroke="' + o + '" stroke-width="2.8" fill="none" stroke-linecap="round"/><path d="M6 -1.5 Q10.5 -1 9.4 -4.4" stroke="' + f + '" stroke-width="1.6" fill="none" stroke-linecap="round"/><ellipse cx="1" cy="-3.6" rx="7.4" ry="3.9" fill="' + f + '" stroke="' + o + '" stroke-width=".6"/><circle cx="-5" cy="-4.6" r="3.4" fill="' + f + '" stroke="' + o + '" stroke-width=".6"/><path d="M-7.8 -6.4l-.6 -3 2.2 1.6z M-4 -7.8l1 -2.8 1 2.6z" fill="' + f + '" stroke="' + o + '" stroke-width=".5"/><path d="M-6.8 -4.6 q.8 .6 1.6 0 M-4.4 -4.6 q.8 .6 1.6 0" stroke="' + INK + '" stroke-width=".5" fill="none"/><path d="M-7.6 -2.2 q2.4 1.2 4.8 0" stroke="' + c.col + '" stroke-width="1.1" fill="none"/><text class="zzz" x="-3" y="-11" font-size="4.6" font-family="Fredoka,sans-serif" font-weight="700" fill="#c9a2ff">z</text>';
+    }
+    var hiss = mode === "hiss", ty = hiss ? -16 : -10;
+    s += '<g class="' + (hiss ? "puff" : "tailw") + '"><path d="M5.6 -2.2 Q11.5 -3 10.6 ' + ty + '" stroke="' + o + '" stroke-width="' + (hiss ? 4.8 : 3.2) + '" fill="none" stroke-linecap="round"/><path d="M5.6 -2.2 Q11.5 -3 10.6 ' + ty + '" stroke="' + f + '" stroke-width="' + (hiss ? 3.4 : 1.9) + '" fill="none" stroke-linecap="round"/></g>';
+    s += '<path d="' + (hiss ? "M-4.6 -.6 Q-5.4 -12.6 1.4 -13 Q8.4 -12.4 7.2 -.6Z" : "M-3.6 -.6 Q-5.2 -9 0 -10.6 Q6.4 -11.4 7 -5.6 Q7.6 -.8 5 -.2Z") + '" fill="' + f + '" stroke="' + o + '" stroke-width=".6"/>';
+    s += '<ellipse cx="-2.8" cy="-.7" rx="1.6" ry="1" fill="' + f + '" stroke="' + o + '" stroke-width=".5"/><ellipse cx=".2" cy="-.7" rx="1.6" ry="1" fill="' + f + '" stroke="' + o + '" stroke-width=".5"/>';
+    var hx = hiss ? -4.2 : -3, hy = hiss ? -13.4 : -12.2;
+    s += '<g transform="translate(' + hx + " " + hy + ')"><path d="M-3.8 -1.6l-.5 -4.6 3 2.4z M1.4 -3.6l1.6 -3.8 1 4.2z" fill="' + f + '" stroke="' + o + '" stroke-width=".55"/><path d="M-3.4 -2.4l-.2 -2 1.2 1z M1.8 -3.6l.8 -1.8.4 1.8z" fill="#ffb3c4"/><circle cx="0" cy="0" r="4.2" fill="' + f + '" stroke="' + o + '" stroke-width=".6"/>' + (hiss ? '<circle cx="-1.6" cy="-.4" r="1.1" fill="#9be37c"/><circle cx="1.4" cy="-.4" r="1.1" fill="#9be37c"/><path d="M-1.6 -1.2v1.6M1.4 -1.2v1.6" stroke="' + INK + '" stroke-width=".5"/><path d="M-1.2 2 l1 1.6 1 -1.6z" fill="#ff7d8e"/>' : '<circle cx="-1.6" cy="-.4" r=".75" fill="#7fb24a"/><circle cx="1.4" cy="-.4" r=".75" fill="#7fb24a"/><path d="M-.5 1.2h1l-.5 .6z" fill="#ff9fb4"/>') + '<path d="M-2.4 1.4l-3.6 -.4M-2.4 2l-3.4 .8M2.2 1.4l3.6 -.4M2.2 2l3.4 .8" stroke="' + o + '" stroke-width=".35"/><path d="M-3.4 3.2 Q0 5 3.4 3.2" stroke="' + c.col + '" stroke-width="1.3" fill="none"/><circle cx="0" cy="4.4" r=".8" fill="#ffd23f"/></g>';
+    return s;
+  }
+  var HEAT = '<path class="steam" d="M-3 -8 q-1.5 -2 0 -4 M0 -8.6 q-1.5 -2 0 -4 M3 -8 q-1.5 -2 0 -4" stroke="#ff9a5c" stroke-width=".8" fill="none"/>';
+  var SPUR_ICON = {
+    "Socken von gestern": '<path d="M-6 -9 h4 v5 l3 0 q2 0 2 2 q0 2 -2 2 h-7z" fill="#fff" stroke="#8d929b" stroke-width=".5"/><path d="M-6 -7.5 h4 M-6 -6 h4" stroke="#e8453c" stroke-width=".8"/><path d="M2 -7 h4 v4.6 l3 0 q2 0 2 2 q0 1.6 -2 1.6 h-7z" fill="#fff" stroke="#8d929b" stroke-width=".5"/>',
+    "Joy-Con auf dem Sofa": '<rect x="-4.5" y="-7" width="3.6" height="7" rx="1.6" fill="#e8453c"/><rect x=".9" y="-7" width="3.6" height="7" rx="1.6" fill="#3aa0e8"/>',
+    "warme Switch": '<rect x="-7" y="-6" width="14" height="6" rx="1.2" fill="#2a2a33"/><rect x="-4.6" y="-5" width="9.2" height="4" fill="#7fe3ff"/><rect x="-7" y="-6" width="2.6" height="6" rx="1.2" fill="#e8453c"/><rect x="4.4" y="-6" width="2.6" height="6" rx="1.2" fill="#3aa0e8"/>' + HEAT,
+    "leere Saftflasche": '<rect x="-5" y="-3.6" width="9" height="3.6" rx="1.2" fill="#ffd27a" opacity=".9"/><rect x="4" y="-2.8" width="2" height="2" fill="#e8453c"/>',
+    "warme Fernbedienung": '<rect x="-6" y="-3" width="12" height="3" rx="1.2" fill="' + INK + '"/><circle cx="-3" cy="-1.5" r=".6" fill="#e8453c"/><circle cx="0" cy="-1.5" r=".5" fill="#7fe3ff"/>' + HEAT,
+    "Decke am Boden": '<path d="M-9 0 q2 -6 6 -4 q3 -4 6 -1 q4 -2 6 5z" fill="#e3c06a"/><path d="M-6 -2h12" stroke="#c9a24a" stroke-width=".7" stroke-dasharray="1.4 1"/>',
+    "Handy unterm Kissen": '<rect x="-7" y="-5" width="14" height="5" rx="2.5" fill="#f3eefa"/><rect class="glowp" x="2" y="-6.5" width="4" height="2.4" rx=".6" fill="#7fe3ff"/>',
+    "Chipskrümel": '<g fill="#ffd27a"><circle cx="-5" cy="-1" r="1"/><circle cx="-1" cy="-1.6" r="1.2"/><circle cx="3" cy="-.8" r=".9"/><circle cx="6" cy="-1.4" r=".7"/><path d="M-3 -3 l3 -1.4 1 2.2z"/></g>',
+    "offene Keksdose": '<rect x="-5" y="-6" width="10" height="6" rx="1" fill="#3aa0e8"/><ellipse cx="0" cy="-6" rx="5" ry="1.4" fill="#2a7fc0"/><circle cx="-1.6" cy="-6.6" r="1.6" fill="#c98a4a"/><circle cx="1.8" cy="-6.4" r="1.4" fill="#c98a4a"/><ellipse cx="9" cy="-.8" rx="4.4" ry="1.2" fill="#2a7fc0"/>',
+    "Legosteine am Boden": BR(-8, -3.4, 6, "#e8453c") + BR(-1, -3.6, 3, "#3aa0e8") + BR(3, -3.2, 6, "#ffd34d") + BR(-4, -6.8, 3, "#7fd48a"),
+    "Legosteine unterm Bett": BR(-9, -3.4, 3, "#3aa0e8") + BR(-4, -3.2, 6, "#e8453c") + BR(4, -3.4, 3, "#7fd48a"),
+    "Halbes Lego-Raumschiff": BR(-8, -3.4, 15, "#9aa6c4") + BR(-4, -6.8, 6, "#3aa0e8") + BR(-11, -2.6, 3, "#e8453c") + BR(7, -2.6, 3, "#e8453c") + BR(10, -1, 3, "#ffd34d"),
+    "iPad-Verlauf voller Gameplay": '<rect x="-6" y="-8" width="12" height="8" rx="1.2" fill="' + INK + '"/><rect x="-5" y="-7" width="10" height="6" fill="#8fd3ff"/><path d="M-5 -3h3v-1h3v1h4v2h-10z" fill="#5fae4a"/><rect x="-5" y="-1.6" width="4" height=".8" fill="#e8453c"/>',
+    "warmes iPad": '<rect x="-5" y="-3" width="10" height="3" rx=".8" fill="' + INK + '"/><rect x="-4.4" y="-2.6" width="8.8" height="2.2" fill="#7fe3ff"/>' + HEAT,
+    "warmes Handy": '<rect x="-3" y="-2.6" width="6" height="2.6" rx=".6" fill="' + INK + '"/><rect x="-2.4" y="-2.2" width="4.8" height="1.8" fill="#7fe3ff"/>' + HEAT
+  };
+  function spurSVG(name, x, y) {
+    return '<g transform="translate(' + x + " " + y + ')"><ellipse class="pulse" cx="0" cy="0" rx="9" ry="2.4" fill="none" stroke="#ff7d8e" stroke-width=".9"/>' + (SPUR_ICON[name] || '<circle cx="0" cy="-3" r="3" fill="#ff7d8e"/>') + "</g>";
+  }
+  var RP = { kt: [12, 44, 176, 116], km: [192, 44, 176, 116], wz: [12, 164, 176, 116], ku: [192, 164, 176, 116], ga: [0, 287, 380, 100] };
+  var WALLC = { kt: "#6e4352", km: "#34406a", wz: "#6a5547", ku: "#4c6d68" };
+  var WIN = { kt: [64, 14, 30, 22, "#3aa0e8"], km: [16, 14, 30, 22, "#7fd48a"], wz: [16, 12, 32, 22, "#ff9fb4"], ku: [120, 12, 30, 22, "#ffd27a"] };
+  var PEND = { kt: 92, km: 98, wz: 86 };
+  var POOL = { kt: [92, 104, 40], km: [98, 104, 40], wz: [86, 104, 46], ku: [76, 104, 40] };
+  var PLAQ = { kt: "ZIMMER T", km: "ZIMMER M", wz: "WOHNZIMMER", ku: "KÜCHE", ga: "GARTEN" };
+  function shade(hex, f) {
+    var n = parseInt(hex.slice(1), 16);
+    var c = [n >> 16, n >> 8 & 255, n & 255].map(function(v) {
+      return Math.max(0, Math.min(255, Math.round(v * f)));
+    });
+    return "#" + c.map(function(v) {
+      return ("0" + v.toString(16)).slice(-2);
+    }).join("");
+  }
+  function lerpHex(a, b, t) {
+    var A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+    var c = [16, 8, 0].map(function(s) {
+      return Math.round((A >> s & 255) * (1 - t) + (B >> s & 255) * t);
+    });
+    return "#" + c.map(function(v) {
+      return ("0" + v.toString(16)).slice(-2);
+    }).join("");
+  }
+  var SKY = [[0, "#9fd3ff"], [200, "#a8d8ff"], [285, "#ffb27a"], [350, "#7a5a9a"], [420, "#1d1c48"]];
+  function skyAt(t) {
+    for (var i = 1; i < SKY.length; i++) {
+      if (t <= SKY[i][0]) {
+        var a = SKY[i - 1], b = SKY[i];
+        return lerpHex(a[1], b[1], Math.max(0, (t - a[0]) / (b[0] - a[0])));
+      }
+    }
+    return SKY[SKY.length - 1][1];
+  }
+  function nightAt(t) {
+    return Math.max(0, Math.min(1, (t - 270) / 150));
+  }
+  function BR(x, y, w, c) {
+    var s = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="3.4" rx=".5" fill="' + c + '"/>';
+    for (var i = 0; i < w / 3 - 0.5; i++) s += '<rect x="' + (x + 0.8 + i * 3) + '" y="' + (y - 1) + '" width="1.6" height="1.1" rx=".3" fill="' + c + '"/>';
+    return s;
+  }
+  var LEGO_SHELF = BR(30, 36.6, 12, "#9aa6c4") + BR(33, 33.2, 6, "#3aa0e8") + BR(27, 37.6, 3, "#e8453c") + BR(42, 37.6, 3, "#e8453c") + BR(46, 36.6, 6, "#ffd34d") + BR(46, 33.2, 6, "#e8453c") + BR(46, 29.8, 6, "#3aa0e8") + BR(46, 26.4, 6, "#7fd48a") + BR(47.5, 23, 3, "#ffd34d");
+  var HERO_POSTER = '<rect x="106" y="12" width="30" height="34" rx="1" fill="#f3eefa"/><rect x="108" y="14" width="26" height="30" fill="#2f4fa8"/><path d="M121 15l2.6 5.6 6-1.8-2.8 5.4 5.4 2.8-5.8 1.6 1.8 6-5.6-2.6-2.6 5.6-1.8-6-6 1.8 2.8-5.4-5.4-2.8 5.8-1.6-1.8-6 5.6 2.6z" fill="#ffd34d" opacity=".9"/><path d="M118 25l-6 13h18l-6-13z" fill="#e8453c"/><rect x="118" y="24.4" width="6" height="9" rx="1.6" fill="#3aa0e8"/><path d="M119 26.6h4l-2 3z" fill="#ffd34d"/><rect x="118.2" y="33" width="2.4" height="6" fill="#1d2450"/><rect x="121.4" y="33" width="2.4" height="6" fill="#1d2450"/><path d="M124 25.6l3.4-6" stroke="#3aa0e8" stroke-width="1.8" stroke-linecap="round"/><circle cx="127.6" cy="19.2" r="1.3" fill="' + SKIN + '"/><circle cx="121" cy="21.4" r="3" fill="' + SKIN + '"/><path d="M118 20.8h6v1.6h-6z" fill="#1d2450"/><path d="M118.4 19.6q2.6-2.6 5.2 0" fill="#3b2a20"/><text x="121" y="43" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="4.8" fill="#ffd34d">HERO!</text>';
+  var DRUMS = '<g><path d="M78 80v24M112 76v28" stroke="#9aa6c4" stroke-width="1"/><ellipse cx="78" cy="80" rx="6" ry="1.4" fill="#e6c25c"/><ellipse cx="78" cy="81.4" rx="6" ry="1.4" fill="#c9a24a"/><ellipse cx="112" cy="75" rx="7" ry="1.6" fill="#e6c25c"/><rect x="80" y="90" width="10" height="7" rx="1" fill="#e8453c"/><ellipse cx="85" cy="90" rx="5" ry="1.4" fill="#f3eefa"/><path d="M82 97l-2 7M88 97l2 7" stroke="#9aa6c4" stroke-width="1"/><circle cx="98" cy="96" r="9.4" fill="#e8453c"/><circle cx="98" cy="96" r="7.6" fill="#f3eefa"/><text x="98" y="98.4" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="5.6" fill="#e8453c">T</text><rect x="93" y="81" width="10" height="6" rx="1" fill="#e8453c"/><ellipse cx="98" cy="81" rx="5" ry="1.3" fill="#f3eefa"/><path d="M90 104l-2 3M106 104l2 3" stroke="#9aa6c4" stroke-width="1.2"/></g>';
+  var LEGO_FLOOR = '<rect x="20" y="99" width="16" height="9" rx="1" fill="#ffd34d"/><rect x="20" y="99" width="16" height="2.4" fill="#e6b400"/><text x="28" y="106.4" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="800" font-size="3.2" fill="#8a4a1e">STEINE</text>' + BR(40, 108, 6, "#e8453c") + BR(50, 110, 3, "#3aa0e8") + BR(58, 107.6, 9, "#7fd48a") + BR(46, 104.2, 3, "#ffd34d") + BR(68, 110.6, 6, "#ffd34d");
+  var GUITAR = '<g id="mguitar"><g transform="rotate(-8 60 102)"><rect x="58.6" y="64" width="2.8" height="26" fill="#6b4126"/><rect x="57.6" y="59" width="4.8" height="6" rx="1" fill="#3b2a20"/><ellipse cx="60" cy="92" rx="6" ry="5" fill="#c97a3e"/><ellipse cx="60" cy="100" rx="7.6" ry="6.4" fill="#c97a3e"/><circle cx="60" cy="93.6" r="1.8" fill="' + INK + '"/><path d="M59.2 64v34M60.8 64v34" stroke="#e9e1f2" stroke-width=".25"/><rect x="56.6" y="99" width="6.8" height="1.4" fill="#3b2a20"/></g></g>';
+  var SCENE = {
+    kt: '<ellipse cx="96" cy="108" rx="34" ry="4.6" fill="#3a6fc8" opacity=".55"/><rect x="14" y="40" width="40" height="3" rx="1" fill="#8a5a3b"/><rect x="16" y="31" width="4" height="9" fill="#ffd34d"/><rect x="20.5" y="32" width="4" height="8" fill="#3aa0e8"/><rect x="25" y="30" width="3.5" height="10" fill="#e8453c"/>' + LEGO_SHELF + '<rect x="6" y="62" width="6" height="40" rx="2" fill="#8a5a3b"/><rect x="8" y="86" width="68" height="12" rx="2" fill="#8a5a3b"/><path d="M12 98v4M72 98v4" stroke="#6b4b3e" stroke-width="3"/><rect x="10" y="74" width="66" height="16" rx="5" fill="#c7322b"/><rect x="34" y="74" width="42" height="16" rx="5" fill="#d8443a"/><path d="M34 82h42" stroke="#2f6fd0" stroke-width="3"/><g fill="#ffd34d"><circle cx="44" cy="78" r="1"/><circle cx="58" cy="86.4" r="1"/><circle cx="68" cy="78" r="1"/></g><rect x="12" y="69" width="20" height="9" rx="4.5" fill="#f3eefa"/><g transform="translate(40 74)"><g class="sqt"><path d="M4 0 Q14 -1 12 -12 Q10 -19 4 -16 Q9 -12 6 -6 Q4 -3 1 -1Z" fill="#b5662e"/><path d="M6 -14 q3 1 4 4" stroke="#d98a4e" stroke-width=".8" fill="none"/></g><ellipse cx="0" cy="-4.6" rx="4.6" ry="5.2" fill="#c97a3e"/><ellipse cx="-.6" cy="-3.6" rx="2.6" ry="3.4" fill="#f0c99a"/><circle cx="-1.6" cy="-11" r="3.8" fill="#c97a3e"/><path d="M-4 -13.6l-.4-3 2.2 2z M.2 -14l1-2.8.8 2.6z" fill="#c97a3e"/><circle cx="-3" cy="-11.4" r=".7" fill="' + INK + '"/><circle cx="-.6" cy="-11.4" r=".7" fill="' + INK + '"/><circle cx="-1.8" cy="-9.8" r=".6" fill="#5e3a22"/><ellipse cx="-3.2" cy="-5.4" rx="1.4" ry="1.7" fill="#a8742a"/><path d="M-4.6 -6.6q1.4-1.6 2.8 0" fill="#6b4428"/><ellipse cx="-3" cy="-.8" rx="1.4" ry=".9" fill="#c97a3e"/><ellipse cx="1.4" cy="-.6" rx="1.4" ry=".9" fill="#c97a3e"/></g>' + HERO_POSTER + '<rect x="112" y="74" width="58" height="4" rx="1" fill="#8a5a3b"/><path d="M116 78v24" stroke="#6b4b3e" stroke-width="3"/><rect x="148" y="78" width="20" height="22" rx="1" fill="#7a5c43"/><path d="M150 89h16" stroke="#5e4136"/><circle cx="158" cy="84" r=".9" fill="#e6c25c"/><circle cx="158" cy="94" r=".9" fill="#e6c25c"/><rect x="116" y="70.5" width="16" height="3.5" fill="#ffd34d"/><rect x="117" y="67.5" width="15" height="3" fill="#3aa0e8"/><rect x="116.5" y="64.6" width="15.5" height="3" fill="#e8453c"/><text x="124" y="67" text-anchor="middle" font-size="2.6" font-weight="800" fill="#fff" font-family="Nunito,sans-serif">COMIC</text><path d="M135 74l7-1.6 7 1.6v-5l-7-1.6-7 1.6z" fill="#f3eefa"/><path d="M142 67.4v5" stroke="#a79fbe" stroke-width=".5"/><path d="M137 70h3.6M137 71.6h3M143.6 70h3.6" stroke="#a79fbe" stroke-width=".5"/><path id="lampcone" d="M154 57 l-7 17 h15z" fill="#ffcf7a" opacity="0"/><path d="M164 74v-14l-8-6" stroke="' + INK + '" stroke-width="1.6" fill="none"/><path d="M151 50l9 3-2 6z" fill="#ffd34d"/><rect x="124" y="86" width="16" height="3" rx="1" fill="#3aa0e8"/><rect x="137" y="70" width="3" height="18" rx="1" fill="#3aa0e8"/><path d="M126 89v12M138 89v12" stroke="' + INK + '" stroke-width="1.4"/>' + DRUMS + LEGO_FLOOR,
+    km: '<ellipse cx="80" cy="108" rx="32" ry="4.4" fill="#7fd48a" opacity=".3"/><rect x="56" y="10" width="28" height="28" rx="1" fill="#f3eefa"/><rect x="58" y="12" width="24" height="24" fill="#1d2450"/><circle cx="70" cy="24" r="6" fill="#e8b84a"/><ellipse cx="70" cy="24" rx="11" ry="2.8" fill="none" stroke="#fff" stroke-width="1" transform="rotate(-14 70 24)"/><g fill="#fff"><circle cx="61" cy="15" r=".7"/><circle cx="79" cy="16" r=".7"/><circle cx="62" cy="33" r=".6"/><circle cx="78" cy="32" r=".8"/></g><rect x="88" y="14" width="16" height="20" fill="#f3eefa"/><path d="M92 31h8l-1.4-2.6c2.2-1.2 2.6-4.4.4-6.6-1.8-1.6-4.4-1-5.6.6l1.8 1.2-1.4 1.8h2.4z" fill="' + INK + '"/><rect x="8" y="80" width="50" height="4" rx="1" fill="#8a5a3b"/><path d="M12 84v18M54 84v18" stroke="#6b4b3e" stroke-width="3"/><rect x="18" y="74" width="28" height="6" fill="#f3eefa"/><g fill="#8a5a3b"><rect x="18" y="74" width="4" height="3"/><rect x="26" y="74" width="4" height="3"/><rect x="34" y="74" width="4" height="3"/><rect x="42" y="74" width="4" height="3"/><rect x="22" y="77" width="4" height="3"/><rect x="30" y="77" width="4" height="3"/><rect x="38" y="77" width="4" height="3"/></g><path d="M20.6 74h3l-.6-4h-1.8z" fill="#f3eefa" stroke="' + INK + '" stroke-width=".5"/><path d="M22.1 69.6v-2.6M21 68.2h2.2" stroke="' + INK + '" stroke-width=".6"/><path d="M38.6 74h3l-.8-3h-1.4z" fill="' + INK + '"/><circle cx="40.1" cy="70.2" r="1.3" fill="' + INK + '"/><path d="M31 74h3.2l-.6-4.4h-2z" fill="' + INK + '"/><circle cx="32.6" cy="68.8" r="1.2" fill="' + INK + '"/><rect x="30" y="92" width="16" height="3" rx="1.5" fill="#7fd48a"/><path d="M33 95v7M43 95v7" stroke="' + INK + '" stroke-width="1.4"/>' + GUITAR + '<circle cx="106" cy="107" r="4.2" fill="#fff" stroke="' + INK + '" stroke-width=".6"/><path d="M104.6 105.6l1.4-1 1.4 1-.5 1.6h-1.8z" fill="' + INK + '"/><path d="M102 107.6l-1.6 .4M110 106l1.6-.6" stroke="' + INK + '" stroke-width=".5"/><g transform="translate(83 104)"><ellipse cx="0" cy="1" rx="17" ry="2.4" fill="#000" opacity=".2"/><ellipse cx="0" cy="-10" rx="15" ry="11" fill="#e8d2a6"/><ellipse cx="0" cy="-8" rx="8" ry="7" fill="#f6e6c6"/><ellipse cx="-9" cy="-1" rx="5" ry="3" fill="#e8d2a6"/><ellipse cx="9" cy="-1" rx="5" ry="3" fill="#e8d2a6"/><g class="ear"><ellipse cx="-11" cy="-30" rx="4.4" ry="8.5" fill="#8a5a3b"/></g><g class="ear er"><ellipse cx="11" cy="-30" rx="4.4" ry="8.5" fill="#8a5a3b"/></g><circle cx="0" cy="-30" r="11" fill="#e8d2a6"/><ellipse cx="0" cy="-25" rx="5.6" ry="4" fill="#f6e6c6"/><ellipse cx="0" cy="-27.4" rx="2.3" ry="1.6" fill="' + INK + '"/><circle cx="-4.4" cy="-32" r="1.4" fill="' + INK + '"/><circle cx="4.4" cy="-32" r="1.4" fill="' + INK + '"/><circle cx="-4" cy="-32.5" r=".45" fill="#fff"/><circle cx="4.8" cy="-32.5" r=".45" fill="#fff"/><path d="M-1.6 -23.6 q1.6 2.6 3.2 0" fill="#ff8fa8"/><path d="M-9 -20 q9 4 18 0" stroke="#e8453c" stroke-width="2" fill="none"/><circle cx="0" cy="-18.4" r="1.4" fill="#ffd23f"/></g><rect x="164" y="62" width="6" height="40" rx="2" fill="#8a5a3b"/><rect x="100" y="86" width="68" height="12" rx="2" fill="#8a5a3b"/><path d="M104 98v4M164 98v4" stroke="#6b4b3e" stroke-width="3"/><rect x="100" y="74" width="66" height="16" rx="5" fill="#1d2450"/><g fill="#ffd34d"><circle cx="108" cy="80" r="1"/><circle cx="118" cy="86" r=".8"/><circle cx="128" cy="78" r="1.2"/><circle cx="138" cy="85" r=".9"/></g><rect x="144" y="69" width="20" height="9" rx="4.5" fill="#f3eefa"/><rect x="112" y="44" width="44" height="3" rx="1" fill="#8a5a3b"/><g transform="translate(118 44)"><path d="M0 0v-9q0-4 2.5-6q2.5 2 2.5 6v9z" fill="#f3eefa"/><path d="M0 -2l-2 2h2zM5 -2l2 2h-2z" fill="#e8453c"/><circle cx="2.5" cy="-8" r="1.1" fill="#7fc8ff"/></g><rect x="130" y="36" width="4" height="8" fill="#7fd48a"/><rect x="134.5" y="37" width="4" height="7" fill="#e8b84a"/><rect x="139" y="35" width="3.6" height="9" fill="#ff7d8e"/><g transform="translate(150 44)"><circle id="nightlight" cx="0" cy="-4" r="3.6" fill="#fff6c9"/><circle cx="1.4" cy="-5" r="3" fill="#34406a"/></g>',
+    wz: '<ellipse cx="90" cy="108" rx="40" ry="5" fill="#b85d4d" opacity=".4"/><rect x="54" y="16" width="22" height="16" rx="1" fill="#c9a24a"/><rect x="56" y="18" width="18" height="12" fill="#9fd3ff"/><rect x="56" y="25" width="18" height="5" fill="#7fbf86"/><circle cx="59" cy="24" r="1.6" fill="#3b3a40"/><circle cx="63" cy="24" r="1.6" fill="#6b4428"/><circle cx="67" cy="25" r="1.3" fill="#7a4b28"/><circle cx="71" cy="25" r="1.5" fill="#b08355"/><path d="M59 30v-4.4M63 30v-4.4M67 30v-3.6M71 30v-3.6" stroke="' + INK + '" stroke-width="1.2"/><ellipse id="tvglow" cx="124" cy="46" rx="34" ry="22" fill="url(#tvg)" opacity="0"/><rect x="98" y="30" width="52" height="30" rx="2" fill="#1d1a2b" stroke="#3a3f52" stroke-width="1"/><g id="tvscr"></g><rect x="120" y="60" width="8" height="16" fill="#2a2540"/><rect x="96" y="76" width="52" height="16" rx="1.5" fill="#8a5a3b"/><path d="M98 84h48" stroke="#6b4b3e"/><path d="M100 92v8M144 92v8" stroke="#6b4b3e" stroke-width="3"/><rect x="102" y="66" width="12" height="10" rx="1.2" fill="#2a2a33"/><g id="swjoy"><rect x="99.5" y="66.5" width="3" height="8" rx="1.4" fill="#e8453c"/><rect x="113.5" y="66.5" width="3" height="8" rx="1.4" fill="#3aa0e8"/><rect x="103" y="67" width="10" height="5.4" fill="#3d4766"/></g><rect x="104.5" y="73" width="7" height="1.2" fill="#e8453c"/><rect x="134" y="66" width="12" height="10" rx="1.5" fill="#f3eefa"/><path d="M136 66l-2-7M144 66l2-7" stroke="' + INK + '" stroke-width="1"/><circle id="led1" class="blink" cx="137.5" cy="71" r="1" fill="#9be37c"/><circle id="led2" class="blink b2" cx="141" cy="71" r="1" fill="#9be37c"/><rect x="6" y="58" width="50" height="22" rx="7" fill="#4f8fa8"/><rect x="4" y="74" width="54" height="16" rx="5" fill="#3f7b93"/><rect x="0" y="66" width="10" height="26" rx="4" fill="#3a7289"/><rect x="52" y="66" width="10" height="26" rx="4" fill="#3a7289"/><path d="M8 92v6M54 92v6" stroke="#6b4b3e" stroke-width="3"/><rect x="11" y="62" width="14" height="12" rx="4" fill="#ffd34d" transform="rotate(-8 18 68)"/><rect x="37" y="62" width="14" height="12" rx="4" fill="#e8453c" transform="rotate(8 44 68)"/><path d="M44 65l1 2 2.2.2-1.6 1.4.5 2.2-2-1.2-2 1.2.5-2.2-1.6-1.4 2.2-.2z" fill="#fff" transform="rotate(8 44 68)"/><path d="M-2 64 q7 -3 14 1 l-1 22 q-4 3 -7 0 q-4 3 -6 0z" fill="#e3c06a"/><path d="M0 70h10M0 76h10M0 82h10" stroke="#c9a24a" stroke-width="1" stroke-dasharray="2 1.4"/><rect x="64" y="58" width="24" height="26" rx="7" fill="#8a5a3b"/><rect x="68" y="54" width="16" height="8" rx="4" fill="#7a4c30"/><rect x="62" y="80" width="28" height="12" rx="3" fill="#7a4c30"/><rect x="59" y="72" width="7" height="22" rx="3" fill="#6b4126"/><rect x="86" y="72" width="7" height="22" rx="3" fill="#6b4126"/><path d="M64 94v6M88 94v6" stroke="#4e2c1e" stroke-width="3"/><rect x="152" y="58" width="20" height="26" rx="7" fill="#c96b8a"/><rect x="150" y="80" width="24" height="12" rx="3" fill="#b45c7a"/><rect x="147" y="72" width="7" height="22" rx="3" fill="#a24f6c"/><rect x="170" y="72" width="7" height="22" rx="3" fill="#a24f6c"/><path d="M152 94v6M172 94v6" stroke="#6b3a4e" stroke-width="3"/><path d="M162 69 q-3 -3 -5 0 q-2 3 5 7 q7 -4 5 -7 q-2 -3 -5 0z" fill="#ffd27a"/><rect x="20" y="98" width="30" height="3" rx="1" fill="#8a5a3b"/><path d="M23 101v6M47 101v6" stroke="#6b4b3e" stroke-width="2"/><path d="M28 98q6 4 12 0z" fill="#e8453c"/><g fill="#ffd27a"><circle cx="31" cy="97.6" r="1.3"/><circle cx="34" cy="97" r="1.4"/><circle cx="37" cy="97.6" r="1.2"/></g><g id="racket"><path d="M96 100l2-10" stroke="#2a2235" stroke-width="1.4"/><ellipse cx="99" cy="85" rx="3.6" ry="5" fill="none" stroke="#e8453c" stroke-width="1.3" transform="rotate(12 99 85)"/><path d="M97 82l4 6M101 81.6l-3.6 6.4" stroke="#e9e1f2" stroke-width=".35"/></g><g class="sway2"><path d="M93.5 86q-6-8-2-14q3 6 3 14M95 86q2-12 7-14q-2 8-5 14M94 86q-1-10 1-16" fill="#4f9a5a" stroke="#3a7a45" stroke-width=".6"/></g><path d="M90 100h9l-1-14h-7z" fill="#c9a24a"/><g id="phS"><rect x="73" y="78.4" width="6" height="2.6" rx=".6" fill="' + INK + '"/><rect x="73.6" y="78.8" width="4.8" height="1.8" fill="#3d4766"/></g><g id="phR"><rect x="159" y="78.4" width="6" height="2.6" rx=".6" fill="' + INK + '"/><rect x="159.6" y="78.8" width="4.8" height="1.8" fill="#3d4766"/></g>',
+    ku: '<rect x="40" y="10" width="34" height="16" rx="1.5" fill="#e6e0d6"/><rect x="76" y="10" width="34" height="16" rx="1.5" fill="#e6e0d6"/><path d="M57 10v16M93 10v16" stroke="#c8bfb2"/><g fill="#9b8e7e"><rect x="53" y="19" width="2" height="4" rx="1"/><rect x="59" y="19" width="2" height="4" rx="1"/><rect x="89" y="19" width="2" height="4" rx="1"/><rect x="95" y="19" width="2" height="4" rx="1"/></g><rect x="40" y="26" width="70" height="2" fill="#ffcf7a" opacity=".7"/><path d="M48 28h22l3 6h-28z" fill="#9aa6c4"/><rect x="6" y="20" width="30" height="80" rx="4" fill="#eef3fb"/><path d="M6 44h30" stroke="#c8d2e4" stroke-width="1.5"/><path d="M10 28v10M10 50v16" stroke="#9aa6c4" stroke-width="2.2" stroke-linecap="round"/><g transform="rotate(3 23 58)"><rect x="14" y="50" width="18" height="16" fill="#fff"/><circle cx="17" cy="55.4" r="1.4" fill="none" stroke="#2f6fd0" stroke-width=".7"/><circle cx="21" cy="55.4" r="1.4" fill="none" stroke="#c96b8a" stroke-width=".7"/><circle cx="25" cy="56.4" r="1.1" fill="none" stroke="#d8343a" stroke-width=".7"/><circle cx="29" cy="56" r="1.5" fill="none" stroke="#1d2450" stroke-width=".7"/><path d="M17 56.8v4M21 56.8v4M25 57.6v3.2M29 57.6v3.2M16 63h14" stroke="' + INK + '" stroke-width=".5"/><path d="M19 64.4l1-1.2 1 1.2M25 64.4l1-1.2 1 1.2" stroke="#8d929b" stroke-width=".5" fill="none"/></g><circle cx="23" cy="49.6" r="1.6" fill="#e8453c"/><g transform="rotate(-4 20 31)"><rect x="14" y="26" width="12" height="10" fill="#ffd27a"/><path d="M16 29h8M16 31.4h6M16 33.6h7" stroke="#8a6a00" stroke-width=".5"/></g><circle cx="20" cy="25.6" r="1.2" fill="#3aa0e8"/><rect x="42" y="66" width="68" height="34" fill="#e6e0d6"/><rect x="40" y="62" width="72" height="4" rx="1" fill="#9b8e7e"/><rect x="46" y="70" width="26" height="20" rx="2" fill="#2b3247"/><rect x="49" y="73" width="20" height="13" rx="1.5" fill="#ff9a5c" opacity=".2"/><path d="M48 68h22" stroke="#9aa6c4" stroke-width="1.6" stroke-linecap="round"/><path d="M76 66v34M93 66v34" stroke="#c8bfb2"/><rect x="83" y="80" width="6" height="1.6" rx=".8" fill="#9b8e7e"/><rect x="97" y="80" width="6" height="1.6" rx=".8" fill="#9b8e7e"/><ellipse cx="59" cy="62" rx="9" ry="1.4" fill="' + INK + '"/><rect x="51" y="51" width="16" height="11" rx="2" fill="#e8453c"/><rect x="50" y="49" width="18" height="3" rx="1.5" fill="#c7322b"/><circle cx="59" cy="48" r="1.4" fill="#c7322b"/><path d="M48 54h3M67 54h3" stroke="#c7322b" stroke-width="1.6" stroke-linecap="round"/><g id="potsteam" opacity=".25"><path class="steam" d="M55 45q-2-3 0-6M60 44q-2-3 0-6M65 45q-2-3 0-6" stroke="#f3eefa" stroke-width="1.1" fill="none"/></g><path d="M77 62l1-13h11l1 13z" fill="#ffd27a"/><path d="M78 49l1-2h9l1 2" fill="#e3b14a"/><text x="83.5" y="57" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="3.6" fill="#8a4a1e">MIAU</text><path d="M80.6 59.6l1-1.4 1 1.4M84.4 59.6l1-1.4 1 1.4" stroke="#8a4a1e" stroke-width=".5" fill="none"/><rect x="94" y="44" width="14" height="18" rx="2" fill="' + INK + '"/><rect x="96" y="47" width="10" height="5" rx="1" fill="#3d4766"/><circle cx="104" cy="49.4" r=".9" fill="#ff7d8e"/><rect x="97.6" y="56" width="6" height="5" rx="1" fill="#f3eefa"/><rect x="116" y="78" width="56" height="3.4" rx="1" fill="#b77a4a"/><path d="M120 81v19M168 81v19" stroke="#8a5a3b" stroke-width="3"/><g id="laptop"><rect x="128" y="64" width="20" height="13" rx="1" fill="#9aa6c4"/><rect x="129.5" y="65.5" width="17" height="10" fill="#3d4766"/><path d="M131 68h12M131 70.4h9M131 72.6h11" stroke="#7fe3ff" stroke-width=".7"/><path d="M125 78h26l-2-1.4h-22z" fill="#b9c3cf"/></g><g id="dinner" opacity="0"><g id="dish"></g><path class="steam" d="M140 68q-1.6-2.4 0-4.8M145 67q-1.6-2.4 0-4.8" stroke="#f3eefa" stroke-width=".9" fill="none"/><ellipse cx="124" cy="77.6" rx="5.6" ry="1.4" fill="#f3eefa"/><ellipse cx="124" cy="77" rx="3.2" ry=".9" fill="#ffd27a"/><ellipse cx="162" cy="77.6" rx="5.6" ry="1.4" fill="#f3eefa"/><ellipse cx="162" cy="77" rx="3.2" ry=".9" fill="#ffd27a"/><path d="M130 77.6l2.6-4M156 77.6l-2.6-4" stroke="#9aa6c4" stroke-width=".7"/></g><g id="ipadT"><path d="M163 77l2-9h7l-1 9z" fill="#c96b8a"/><rect x="164.4" y="68.6" width="6.4" height="7.6" rx=".6" fill="' + INK + '"/><rect x="165" y="69.2" width="5.2" height="6.4" fill="#3d4766"/></g><rect x="156" y="72" width="6" height="6" rx="1" fill="#ff9fc4"/><path d="M162 73.4q2.6 0 2.6 1.6 0 1.6-2.6 1.6" stroke="#ff9fc4" stroke-width="1" fill="none"/><ellipse cx="46" cy="106" rx="4.6" ry="1.8" fill="#ff8fb1"/><ellipse cx="58" cy="106" rx="4.6" ry="1.8" fill="#e8453c"/><ellipse cx="70" cy="106" rx="4.6" ry="1.8" fill="#ffd34d"/><ellipse cx="82" cy="106" rx="4.6" ry="1.8" fill="#3aa0e8"/><g fill="#8a5a3b"><circle cx="45" cy="105" r=".7"/><circle cx="47" cy="105.2" r=".7"/><circle cx="57" cy="105" r=".7"/><circle cx="71" cy="105" r=".7"/><circle cx="81" cy="105.2" r=".7"/><circle cx="83" cy="105" r=".7"/></g>'
+  };
+  function shirtSVG(x, y, col, extra, d) {
+    return '<g class="sway" style="animation-delay:-' + d + 's"><path transform="translate(' + x + " " + y + ')" d="M-6 0h12l4 4-3 2.4-2-1.6v11h-10v-11l-2 1.6-3-2.4z" fill="' + col + '"/>' + (extra || "") + '<rect x="' + (x - 4) + '" y="' + (y - 2) + '" width="1.6" height="3" fill="#c9a24a"/><rect x="' + (x + 2.4) + '" y="' + (y - 2) + '" width="1.6" height="3" fill="#c9a24a"/></g>';
+  }
+  var GARDEN = '<rect x="-10" y="0" width="400" height="104" fill="#4f8a4f"/><rect x="-10" y="0" width="400" height="5" fill="#5f9e5c"/><g fill="#548f52"><rect x="0" y="18" width="380" height="8"/><rect x="0" y="42" width="380" height="8"/><rect x="0" y="74" width="380" height="8"/></g><g fill="#b8a07a"><ellipse cx="190" cy="9" rx="8" ry="2.4"/><ellipse cx="184" cy="22" rx="9" ry="2.8"/><ellipse cx="190" cy="37" rx="10" ry="3"/></g><ellipse cx="14" cy="40" rx="22" ry="24" fill="#3f7d3a"/><ellipse cx="42" cy="50" rx="18" ry="18" fill="#4a8c45"/><ellipse cx="6" cy="62" rx="16" ry="12" fill="#4a8c45"/><g fill="#ff9fb4"><circle cx="20" cy="30" r="1.6"/><circle cx="38" cy="44" r="1.6"/><circle cx="8" cy="52" r="1.4"/></g><g transform="translate(66 72)"><ellipse cx="0" cy="0" rx="5" ry="1.4" fill="#000" opacity=".25"/><path d="M-4 0v-7h8v7z" fill="#3aa0e8"/><circle cx="0" cy="-9" r="3" fill="' + SKIN + '"/><path d="M-3.6 -8 q3.6 6 7.2 0 q-3.6 2 -7.2 0z" fill="#fff"/><path d="M-3.4 -10.4 l3.4 -9 3.4 9z" fill="#e8453c"/></g><path d="M84 66V20M176 66V20" stroke="#8a5a3b" stroke-width="2.4"/><path d="M84 22 Q130 30 176 22" stroke="#e9e1f2" stroke-width=".7" fill="none"/>' + shirtSVG(98, 24.6, "#2f6fd0", "", 0) + shirtSVG(118, 26.4, "#ff9fc4", "", 1.2) + shirtSVG(140, 26.4, "#d8343a", '<path d="M140 31.5l1 2 2.2-.6-.9 2 1.9 1.2-2.2.4.2 2.2-1.8-1.4-1.8 1.4.2-2.2-2.2-.4 1.9-1.2-.9-2 2.2.6z" fill="#ffd34d"/>', 2.1) + shirtSVG(162, 24.6, "#1d2450", '<circle cx="162" cy="33" r="2" fill="#e8b84a"/><ellipse cx="162" cy="33" rx="3.8" ry="1" fill="none" stroke="#fff" stroke-width=".5"/>', 0.6) + '<g transform="translate(226 58)"><path d="M-22 0l-3 9M22 0l3 9M-8 2l-1 8M8 2l1 8" stroke="' + INK + '" stroke-width="2"/><ellipse cx="0" cy="0" rx="27" ry="6.4" fill="#3aa0e8"/><ellipse cx="0" cy="0" rx="22" ry="4.6" fill="' + INK + '"/><ellipse cx="0" cy="-.4" rx="20" ry="3.6" fill="#33334a"/></g><g transform="translate(262 66)"><path d="M0 0l10 -16M14 0l-6 -9" stroke="#8a5a3b" stroke-width="1.6"/><path d="M2 -2l9 -14 4 1.4-8 12.6z" fill="#ff9fc4"/><path d="M4 -5l8 -10M6 -2.6l7 -11" stroke="#fff" stroke-width="1"/></g><g transform="translate(306 66)"><path d="M-8 0l4 -12M8 0l-4 -12M0 0v-10" stroke="' + INK + '" stroke-width="1.6"/><ellipse id="grillfire" cx="0" cy="-16.4" rx="9" ry="3" fill="#ff9a5c" opacity="0"/><path d="M-10 -16a10 7 0 0 0 20 0z" fill="#2c2c38"/><path d="M-11 -16h22" stroke="#9aa6c4" stroke-width="1"/><g id="sausages" opacity="0"><rect x="-6" y="-18" width="5" height="2" rx="1" fill="#a0522d"/><rect x="1" y="-18.4" width="5" height="2" rx="1" fill="#a0522d"/></g><g id="grillsmoke" opacity="0"><circle class="smoke" cx="-2" cy="-24" r="3" fill="#cfcfd8"/><circle class="smoke s2" cx="3" cy="-30" r="2.6" fill="#cfcfd8"/><circle class="smoke s3" cx="-1" cy="-36" r="2.2" fill="#cfcfd8"/></g></g><g id="mower" transform="translate(352 66)"><g class="mbody"><rect x="-8" y="-7" width="13" height="6" rx="1.5" fill="#e8453c"/><path d="M5 -6l7 -11" stroke="' + INK + '" stroke-width="1.4"/><circle cx="-6" cy="-1" r="2" fill="' + INK + '"/><circle cx="3" cy="-1" r="2" fill="' + INK + '"/></g></g><ellipse cx="250" cy="94" rx="44" ry="5" fill="#3f7d3a"/><g fill="#ffd34d"><circle cx="216" cy="91" r="1.6"/><circle cx="238" cy="92.4" r="1.6"/><circle cx="262" cy="90" r="1.6"/><circle cx="284" cy="92" r="1.6"/></g><g fill="#ff7d8e"><circle cx="228" cy="90" r="1.6"/><circle cx="250" cy="92.4" r="1.6"/><circle cx="274" cy="90.4" r="1.6"/></g><g transform="translate(344 26)"><rect x="-9" y="-20" width="13" height="20" rx="1" fill="#8a5a3b"/><path d="M-9 -14h13M-9 -7h13" stroke="#6b4126"/><circle cx="2" cy="-10" r=".9" fill="#e6c25c"/><rect x="6" y="-22" width="3" height="22" fill="#9aa6c4"/><g id="bell"><g class="bellr"><circle cx="7.5" cy="-18" r="2.6" fill="#ffd23f" stroke="' + INK + '" stroke-width=".5"/></g></g></g><g fill="#e9e1f2"><rect x="364" y="8" width="3" height="18" rx="1"/><rect x="372" y="8" width="3" height="18" rx="1"/></g><path d="M358 13h24M358 21h24" stroke="#e9e1f2" stroke-width="1.6"/>';
+  var DISH = {
+    "Spaghetti": '<ellipse cx="144" cy="74" rx="11" ry="4" fill="#e8453c"/><ellipse cx="144" cy="72.6" rx="9" ry="2.4" fill="#ffd27a"/><path d="M138 72q2-1.4 4 0t4 0t4 0" stroke="#e8b84a" stroke-width=".8" fill="none"/><circle cx="141" cy="71.6" r="1.1" fill="#c7322b"/><circle cx="146.6" cy="71.8" r="1.1" fill="#c7322b"/>',
+    "Dampfnudeln": '<ellipse cx="144" cy="75" rx="12" ry="3.4" fill="#f3eefa"/><ellipse cx="144" cy="74.4" rx="9.6" ry="2.2" fill="#ffe7a0"/><g fill="#fffaf0" stroke="#e3c06a" stroke-width=".5"><path d="M135.6 74a3.6 3.4 0 0 1 7.2 0z"/><path d="M141 73.4a3.8 3.6 0 0 1 7.6 0z"/><path d="M146.6 74a3.6 3.4 0 0 1 7.2 0z"/></g><path d="M136 74h6.4M141.4 73.4h6.8M147 74h6.4" stroke="#c98a3a" stroke-width=".9"/>',
+    "Pizza": '<ellipse cx="144" cy="74.6" rx="12" ry="3.6" fill="#c98a4a"/><ellipse cx="144" cy="74" rx="10.4" ry="2.8" fill="#ffd27a"/><g fill="#c7322b"><circle cx="139.6" cy="73.6" r="1"/><circle cx="144" cy="74.6" r="1"/><circle cx="148.4" cy="73.4" r="1"/><circle cx="143" cy="72.6" r=".8"/></g><path d="M144 71.4v5.2M138 74h12" stroke="#b77a4a" stroke-width=".4"/>',
+    "Gemüseauflauf": '<rect x="134" y="70" width="20" height="6" rx="2" fill="#e3e8f2"/><rect x="135.4" y="70.4" width="17.2" height="3" rx="1" fill="#f2a64a"/><g fill="#5fae4a"><circle cx="138" cy="71.2" r=".9"/><circle cx="146" cy="71.4" r=".9"/></g><g fill="#c7322b"><circle cx="142" cy="71" r=".8"/><circle cx="150" cy="71.2" r=".8"/></g>',
+    "Linsen mit Spätzle": '<ellipse cx="144" cy="74.4" rx="11" ry="3.4" fill="#f3eefa"/><ellipse cx="140" cy="73.6" rx="5.6" ry="1.8" fill="#8a5a3b"/><path d="M144.6 73q1.2-1 2.4 0t2.4 0M145 74.4q1.2-1 2.4 0t2.4 0" stroke="#ffd34d" stroke-width="1" fill="none"/><rect x="137" y="71" width="7" height="1.8" rx=".9" fill="#c7322b"/>'
+  };
+  var MENUS = ["Dampfnudeln", "Pizza", "Spaghetti", "Gemüseauflauf", "Linsen mit Spätzle"];
+  function favMenu() {
+    return G.menu === "Dampfnudeln" || G.menu === "Pizza";
+  }
+  var TVS = {
+    off: '<rect x="101" y="33" width="46" height="24" fill="#1f2433"/><path d="M104 36l9 7M108 36l13 10" stroke="#2c3348" stroke-width="1.4"/>',
+    football: '<rect x="101" y="33" width="46" height="24" fill="#3f9a4f"/><g stroke="#e9f5e9" stroke-width=".6" fill="none"><rect x="103" y="35" width="42" height="20"/><path d="M124 35v20"/><circle cx="124" cy="45" r="3.4"/><rect x="103" y="40" width="5" height="10"/><rect x="140" y="40" width="5" height="10"/></g><g class="ballrun"><circle cx="0" cy="0" r="1" fill="#fff"/></g><g fill="#e8453c"><circle cx="114" cy="42" r="1"/><circle cx="118" cy="49" r="1"/></g><g fill="#2f6fd0"><circle cx="131" cy="40" r="1"/><circle cx="134" cy="48" r="1"/></g><rect x="102" y="34" width="14" height="4.4" fill="#1d1a2b" opacity=".75"/><text x="109" y="37.4" text-anchor="middle" font-size="3.2" font-weight="800" fill="#fff" font-family="Nunito,sans-serif">1:0</text>',
+    game: '<rect x="101" y="33" width="46" height="24" fill="#8fd3ff"/><path d="M101 47h8v-3h8v2h8v-4h8v3h8v-2h6v14h-46z" fill="#5fae4a"/><rect x="101" y="50" width="46" height="7" fill="#8a5a3b"/><g fill="#6b4126"><rect x="104" y="52" width="3" height="3"/><rect x="118" y="53" width="3" height="3"/><rect x="134" y="52" width="3" height="3"/></g><rect x="126" y="36" width="5" height="5" fill="#ffe27a"/><g class="hop"><rect x="114" y="38" width="3" height="3" fill="' + SKIN + '"/><rect x="114" y="41" width="3" height="4" fill="#3aa0e8"/></g><g fill="#ff7d8e"><rect x="103" y="35" width="2" height="2"/><rect x="106" y="35" width="2" height="2"/><rect x="109" y="35" width="2" height="2"/></g>',
+    rober: '<rect x="101" y="33" width="46" height="24" fill="#1f3a5a"/><path d="M114 37h6v6l5 9h-16l5-9z" fill="#9fd3ff" opacity=".85"/><path d="M110.6 50h12.8l-2-3.6h-8.8z" fill="#9be37c"/><circle class="steam" cx="116" cy="44" r=".9" fill="#fff"/><circle class="steam s2" cx="118.4" cy="42" r=".7" fill="#fff"/><text x="135" y="47" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="8" fill="#ffd34d">?!</text>',
+    hero: '<rect x="101" y="33" width="46" height="24" fill="#1d2450"/><g fill="#ffd34d" opacity=".9"><circle cx="106" cy="37" r=".5"/><circle cx="140" cy="36" r=".6"/><circle cx="131" cy="40" r=".4"/></g><g fill="#2a2540"><rect x="101" y="49" width="6" height="8"/><rect x="108" y="46" width="5" height="11"/><rect x="114" y="50" width="7" height="7"/><rect x="133" y="47" width="6" height="10"/><rect x="140" y="44" width="7" height="13"/></g><g fill="#ffcf7a"><rect x="109" y="48" width="1.2" height="1.2"/><rect x="142" y="47" width="1.2" height="1.2"/><rect x="135" y="50" width="1.2" height="1.2"/></g><g class="hop"><path d="M118 44l12-6-2 4z" fill="#e8453c"/><rect x="124" y="38.4" width="8" height="3" rx="1.4" fill="#3aa0e8" transform="rotate(-24 128 40)"/><circle cx="133" cy="37" r="1.6" fill="' + SKIN + '"/></g><text x="124" y="56" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="3.6" fill="#ffd34d">HELDEN-FILMABEND</text>',
+    series: '<rect x="101" y="33" width="46" height="24" fill="#6a4a8a"/><circle cx="124" cy="48" r="7" fill="#ffb27a"/><rect x="101" y="50" width="46" height="7" fill="#2a2540"/><circle cx="114" cy="44" r="3" fill="#1d1a2b"/><path d="M110 57q4-9 8 0" fill="#1d1a2b"/><circle cx="134" cy="44.6" r="3" fill="#1d1a2b"/><path d="M130 57q4-9 8 0" fill="#1d1a2b"/><path d="M121 38q1.6-1.8 3 0q1.4-1.8 3 0q0 1.8-3 3.6q-3-1.8-3-3.6z" fill="#ff7d8e"/>'
+  };
+  var YTBAR = '<rect x="101" y="55.6" width="46" height="1.4" fill="#5a5a66"/><rect x="101" y="55.6" width="19" height="1.4" fill="#e8453c"/>';
+  var FACECAM = '<rect x="137" y="34" width="9" height="7" fill="' + INK + '"/><circle cx="141.5" cy="38.4" r="2" fill="' + SKIN + '"/><path d="M139 37 q2.5 -2.4 5 0" stroke="#e8453c" stroke-width="1" fill="none"/>';
+  function wallpaperDefs() {
+    var p = function(id, w, h, body, bg) {
+      return '<pattern id="' + id + '" width="' + w + '" height="' + h + '" patternUnits="userSpaceOnUse"><rect width="' + w + '" height="' + h + '" fill="' + bg + '"/>' + body + "</pattern>";
+    };
+    return p("wp-kt", 10, 10, '<circle cx="2.5" cy="2.5" r="1.1" fill="#7d4f60"/><circle cx="7.5" cy="7.5" r="1.1" fill="#7d4f60"/>', WALLC.kt) + p("wp-km", 16, 16, '<path d="M4 2l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" fill="#4c5a8e"/><circle cx="12" cy="11" r=".8" fill="#4c5a8e"/>', WALLC.km) + p("wp-wz", 14, 14, '<path d="M7 1 L11 7 L7 13 L3 7Z" fill="none" stroke="#7a6352" stroke-width=".9"/>', WALLC.wz) + p("wp-ku", 10, 10, '<rect width="5" height="5" fill="#557771"/><rect x="5" y="5" width="5" height="5" fill="#557771"/>', WALLC.ku) + '<radialGradient id="pool"><stop offset="0" stop-color="#ffd58a" stop-opacity=".85"/><stop offset=".6" stop-color="#ffb35a" stop-opacity=".25"/><stop offset="1" stop-color="#ffb35a" stop-opacity="0"/></radialGradient><radialGradient id="tvg"><stop offset="0" stop-color="#7fe3ff" stop-opacity=".8"/><stop offset="1" stop-color="#7fe3ff" stop-opacity="0"/></radialGradient>';
+  }
+  function roomSVG(r) {
+    var p = RP[r], w = p[2], h = p[3], wall = WALLC[r], dk = shade(wall, 0.72), dkk = shade(wall, 0.58), s = "";
+    s += '<g id="rm-' + r + '" transform="translate(' + p[0] + " " + p[1] + ')"><clipPath id="clip-' + r + '"><rect width="' + w + '" height="' + h + '"/></clipPath><g clip-path="url(#clip-' + r + ')">';
+    s += '<rect width="' + w + '" height="' + h + '" fill="url(#wp-' + r + ')"/>';
+    s += '<path d="M0 0 H' + w + " L" + (w - 8) + ' 8 H8Z" fill="' + dkk + '"/><path d="M0 0 L8 8 V100 L0 ' + h + 'Z" fill="' + dk + '"/><path d="M' + w + " 0 L" + (w - 8) + " 8 V100 L" + w + " " + h + 'Z" fill="' + dk + '"/>';
+    var mid = w / 2, i;
+    if (r === "ku") {
+      s += '<path d="M0 ' + h + " L8 100 H" + (w - 8) + " L" + w + " " + h + 'Z" fill="#c9d3df"/>';
+      for (i = 0; i < 9; i++) {
+        var x = 14 + i * 19;
+        s += '<path d="M' + x + " 100 L" + (x + (x - mid) * 0.12).toFixed(1) + " " + h + '" stroke="#aab6c6" stroke-width=".7"/>';
+      }
+      s += '<path d="M4 108 H' + (w - 4) + '" stroke="#aab6c6" stroke-width=".7"/>';
+    } else {
+      s += '<path d="M0 ' + h + " L8 100 H" + (w - 8) + " L" + w + " " + h + 'Z" fill="#7a5a45"/>';
+      [103, 107, 111].forEach(function(y) {
+        s += '<path d="M' + (116 - y) / 2 + " " + y + " H" + (w - (116 - y) / 2) + '" stroke="#6a4c3a" stroke-width=".8"/>';
+      });
+    }
+    s += '<path d="M8 99.4 H' + (w - 8) + '" stroke="' + shade(wall, 1.35) + '" stroke-width="1.6"/>';
+    var W = WIN[r];
+    if (W) {
+      var x0 = W[0], y0 = W[1], ww = W[2], hh = W[3];
+      s += '<rect x="' + (x0 - 2) + '" y="' + (y0 - 2) + '" width="' + (ww + 4) + '" height="' + (hh + 4) + '" rx="2" fill="#e9e1f2"/><rect x="' + x0 + '" y="' + y0 + '" width="' + ww + '" height="' + hh + '" style="fill:var(--sky)"/><g class="stars" opacity="0"><circle cx="' + (x0 + ww * 0.25) + '" cy="' + (y0 + hh * 0.3) + '" r=".7" fill="#fff"/><circle cx="' + (x0 + ww * 0.7) + '" cy="' + (y0 + hh * 0.22) + '" r=".6" fill="#fff"/><circle cx="' + (x0 + ww * 0.8) + '" cy="' + (y0 + hh * 0.6) + '" r="2.2" fill="#fff6c9"/></g><path d="M' + (x0 + ww / 2) + " " + y0 + " v" + hh + " M" + x0 + " " + (y0 + hh / 2) + " h" + ww + '" stroke="#e9e1f2" stroke-width="1.6"/><path d="M' + (x0 - 4) + " " + (y0 - 3) + " q" + (ww / 4 + 2) + " 8 0 " + (hh + 6) + '" fill="' + W[4] + '" opacity=".8"/><path d="M' + (x0 + ww + 4) + " " + (y0 - 3) + " q" + (-ww / 4 - 2) + " 8 0 " + (hh + 6) + '" fill="' + W[4] + '" opacity=".8"/><path d="M' + (x0 - 5) + " " + (y0 - 3) + " h" + (ww + 10) + '" stroke="#8a5a3b" stroke-width="1.4"/>';
+    }
+    if (PEND[r] !== void 0) {
+      var px = PEND[r];
+      s += '<path d="M' + px + ' 8 v8" stroke="' + INK + '" stroke-width=".8"/><path d="M' + (px - 7) + ' 23 q0 -7 7 -7 q7 0 7 7z" fill="#ffcf7a"/><ellipse cx="' + px + '" cy="23" rx="7" ry="1.4" fill="#ffe7b0"/>';
+    }
+    s += SCENE[r];
+    s += '<rect class="night" width="' + w + '" height="' + h + '" fill="#0b0a20" opacity="0"/>';
+    var P = POOL[r];
+    s += '<ellipse class="pool" cx="' + P[0] + '" cy="' + P[1] + '" rx="' + P[2] + '" ry="' + P[2] * 0.8 + '" fill="url(#pool)" opacity="0"/>';
+    s += '<g id="dyn-' + r + '"></g></g>';
+    s += '<g class="plaque"><rect x="11" y="11" width="' + (PLAQ[r].length * 4.7 + 10) + '" height="11" rx="3" fill="#1d1a2b" opacity=".78"/><text x="16" y="19" font-family="Nunito,sans-serif" font-weight="800" font-size="7" letter-spacing=".4" fill="#e8e2f4">' + PLAQ[r] + "</text></g>";
+    s += '<rect class="hl" x="1.5" y="1.5" width="' + (w - 3) + '" height="' + (h - 3) + '" rx="2"/>';
+    s += '<rect class="room" data-r="' + r + '" tabindex="0" role="button" aria-label="' + ROOMS[r] + '" width="' + w + '" height="' + h + '" fill="transparent"/>';
+    return s + "</g>";
+  }
+  function gardenSVG() {
+    var p = RP.ga;
+    return '<g id="rm-ga" transform="translate(0 ' + p[1] + ')">' + GARDEN + '<rect class="night" x="-10" width="400" height="104" fill="#0b0a20" opacity="0"/><g id="dyn-ga"></g><g class="plaque"><rect x="8" y="80" width="' + (PLAQ.ga.length * 4.7 + 10) + '" height="11" rx="3" fill="#1d1a2b" opacity=".78"/><text x="13" y="88" font-family="Nunito,sans-serif" font-weight="800" font-size="7" letter-spacing=".4" fill="#e8e2f4">GARTEN</text></g><rect class="hl" x="1.5" y="1.5" width="377" height="' + (p[3] - 3) + '" rx="2"/><rect class="room" data-r="ga" tabindex="0" role="button" aria-label="Garten" width="380" height="' + p[3] + '" fill="transparent"/></g>';
+  }
+  function outdoorSVG() {
+    var st = [[20, -30], [60, -12], [110, -36], [150, -20], [240, -34], [270, -14], [330, -28], [360, -8], [30, 10], [350, 14]];
+    return '<rect x="-10" y="-50" width="400" height="345" style="fill:var(--sky)"/><g id="ostars" opacity="0">' + st.map(function(a, i) {
+      return '<circle cx="' + a[0] + '" cy="' + a[1] + '" r="' + (i % 3 ? 0.8 : 1.2) + '" fill="#fff"/>';
+    }).join("") + '</g><g id="sun"><circle r="16" fill="#ffe27a" opacity=".25"/><circle r="10" fill="#ffe27a"/></g><g id="moon" opacity="0" transform="translate(56 -22)"><circle r="9" fill="#fff6c9"/><circle cx="3" cy="-2" r="2" fill="#e9dfae"/><circle cx="-3" cy="3" r="1.4" fill="#e9dfae"/></g><g class="cloud"><ellipse cx="0" cy="0" rx="16" ry="6" fill="#fff" opacity=".85"/><ellipse cx="9" cy="-4" rx="9" ry="6" fill="#fff" opacity=".85"/><ellipse cx="-8" cy="-3" rx="7" ry="5" fill="#fff" opacity=".85"/></g><g class="c2"><ellipse cx="0" cy="0" rx="12" ry="4.5" fill="#fff" opacity=".7"/><ellipse cx="6" cy="-3" rx="7" ry="4.5" fill="#fff" opacity=".7"/></g>';
+  }
+  function buildHouse() {
+    var s = '<svg id="house" viewBox="0 -44 380 431" preserveAspectRatio="xMidYMid meet" style="--sky:#9fd3ff"><defs>' + wallpaperDefs() + '</defs><g id="world">' + outdoorSVG();
+    s += '<path d="M2 46 L190 4 L378 46Z" fill="#6b3f3a"/><path d="M2 46 L190 4 L378 46" stroke="#4e2c2a" stroke-width="2.5" fill="none" stroke-linejoin="round"/><path d="M30 40 L190 9 L350 40" stroke="#7d4b44" stroke-width="2" fill="none"/><path d="M60 43 L190 16 L320 43" stroke="#7d4b44" stroke-width="2" fill="none"/>';
+    s += '<rect x="290" y="12" width="16" height="24" fill="#5a4a5e"/><rect x="287" y="9" width="22" height="5" rx="1" fill="#4a3c4e"/><g class="smoke"><circle cx="298" cy="4" r="3" fill="#a79fbe" opacity=".5"/><circle cx="304" cy="-2" r="2.4" fill="#a79fbe" opacity=".35"/></g>';
+    s += '<g transform="translate(92 30)"><path d="M0 0v-6" stroke="#9aa6c4" stroke-width="1.4"/><path d="M-7 -13a7 5 0 0 0 11 8z" fill="#e9e1f2"/><path d="M-2 -9l5 -3" stroke="#9aa6c4" stroke-width="1"/><circle cx="3.4" cy="-12.2" r="1" fill="#9aa6c4"/></g>';
+    s += '<circle cx="190" cy="30" r="8.5" fill="#e9e1f2"/><circle id="attic" cx="190" cy="30" r="7" fill="#2a2540"/><path d="M183 30h14M190 23v14" stroke="#e9e1f2" stroke-width="1.2"/>';
+    s += '<g class="pigeon"><g transform="rotate(12)"><ellipse cx="0" cy="-3" rx="4" ry="2.6" fill="#9aa0a8"/><circle cx="-3.4" cy="-5.6" r="1.8" fill="#8a909a"/><path d="M-5.2 -5.6l-1.6 .6 1.6 .4z" fill="#ffb347"/><path d="M3 -3.6l3 -1 -1 2z" fill="#7d838d"/><circle cx="-3.8" cy="-6" r=".4" fill="' + INK + '"/><path d="M-1 -.6v1M1 -.6v1" stroke="#ff8a5c" stroke-width=".6"/></g></g>';
+    s += '<rect x="8" y="40" width="364" height="246" rx="2" fill="#2e2740"/>';
+    s += ["kt", "km", "wz", "ku"].map(roomSVG).join("");
+    s += '<rect x="188" y="100" width="4" height="60" fill="#1a1626"/><rect x="187" y="98" width="6" height="3" fill="#8a6a4f"/><rect x="188" y="220" width="4" height="60" fill="#1a1626"/><rect x="187" y="218" width="6" height="3" fill="#8a6a4f"/>';
+    s += '<rect x="4" y="280" width="372" height="7" rx="2" fill="#4a3f55"/>' + gardenSVG();
+    s += '<g id="figs">' + ["FT", "FM", "NB", "S", "R", "T", "M"].map(function(k) {
+      return '<g id="f-' + k + '" class="fg" style="opacity:0"></g>';
+    }).join("") + '</g><g id="bubs"></g></g></svg>';
+    $("plan").innerHTML = s;
+    $("minihost").innerHTML = '<svg class="mini" id="mini" viewBox="4 0 372 388" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Ganzes Haus, Raum antippen"><use href="#world" xlink:href="#world"/></svg>';
+  }
+  function bub(w, t) {
+    if (!G.bubs) G.bubs = [];
+    G.bubs.push({ who: w, text: t });
+    if (G.bubs.length > 3) G.bubs.shift();
+  }
+  function cbub(n, t) {
+    G.cbub = { n, text: t };
+    return "";
+  }
+  function bubbleSVG(text, x, y) {
+    var w = Math.max(18, text.length * 3.3 + 10);
+    x = Math.max(w / 2 + 4, Math.min(376 - w / 2, x));
+    return '<g transform="translate(' + x.toFixed(1) + " " + y.toFixed(1) + ')"><g class="bub"><rect x="' + -w / 2 + '" y="-9" width="' + w + '" height="11" rx="5.5" fill="#f3eefa"/><path d="M-2 1.8 l2 3.6 2 -3.6z" fill="#f3eefa"/><text x="0" y="-1.6" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="6.2" fill="' + INK + '">' + esc(text) + "</text></g></g>";
+  }
+  function initCats() {
+    G.cats = { Mogli: pick(["kt", "ga"]), Nia: pick(["ku", "km"]), Nelli: pick(ORDER), Nala: pick(ORDER) };
+  }
+  function mediaRooms() {
+    var a = [];
+    if (G.mode === "parent") {
+      ["T", "M"].forEach(function(k) {
+        if (G.kids[k].media) a.push(G.kids[k].pos);
+      });
+    } else {
+      if (G.sib.media) a.push(G.sib.pos);
+      if (G.lastMediaRoom && G.t - G.lastMedia <= 15) a.push(G.lastMediaRoom);
+    }
+    return a;
+  }
+  function catsFed() {
+    return G.mode === "kid" ? G.fed : G.tasks.some(function(x) {
+      return x.l === "Katzen füttern" && x.done >= x.ticks;
+    });
+  }
+  function moveCats() {
+    var m = mediaRooms();
+    CATS.forEach(function(c) {
+      if (rnd() >= 0.35) return;
+      var w = { kt: 1, km: 1, wz: 1, ku: 1, ga: 1 };
+      if (c.n !== "Nala") m.forEach(function(r) {
+        w[r] += 2;
+      });
+      if (c.n === "Mogli") {
+        w.kt += 4;
+        w.ga += 4;
+      }
+      if (c.n === "Nia") {
+        w.ku += 5;
+        w.km += 2;
+      }
+      if (c.n === "Nelli" && G.t >= 300) w.wz += 10;
+      G.cats[c.n] = wpick(w);
+    });
+    if (G.t >= 300 && rnd() < 0.7) G.cats.Nelli = "wz";
+    if (G.cats.Nelli === G.cats.Nia && rnd() < 0.6) {
+      var from = G.cats.Nia;
+      G.cats.Nia = pick(ORDER.filter(function(r) {
+        return r !== from;
+      }));
+      cbub("Nelli", "Fauch!");
+      log("Nelli faucht Nia an. Nia flitzt " + IN[G.cats.Nia] + ".");
+      if (G.mode === "kid" && from === G.pos[G.who]) G.noise = from;
+    }
+    if (G.cats.Nia === "ku" && !G.cbub && G.t < 300 && rnd() < (catsFed() ? 0.15 : 0.45)) cbub("Nia", catsFed() ? "Miau? Nachschlag?" : "MIAU! HUNGER!");
+    if (G.mode === "parent" && G.who === "S" && G.cats.Nala === G.pos.S && rnd() < 0.3) {
+      cbub("Nala", "Bonk.");
+      log("Nala läuft gegen den Türrahmen. Papa seufzt.");
+      G.stress += 1;
+    }
+  }
+  function dinnerVerdict(choice) {
+    if (G.dinnerJudged) return;
+    G.dinnerJudged = true;
+    if (G.who !== "T" && favMenu()) {
+      bub("T", G.menu === "Dampfnudeln" ? "Noch eine Dampfnudel!" : "Noch ein Stück!");
+      log("T schafft drei Portionen " + G.menu + ". Rekord.");
+      if (G.mode === "parent") G.pts += 3;
+    }
+    if (G.mode === "parent") {
+      var dn = G.tasks.filter(function(x2) {
+        return x2.dinner;
+      })[0];
+      if (G.who === "R" && dn.done < dn.ticks) {
+        G.menu = "Pizza";
+        bub("M", "Pizza! Fein!");
+        bub("T", "PIZZA!!");
+        log("Ausgerechnet die Lieferpizza findet M fein. Mama: „…“ Stress +3", "bad");
+        G.stress += 3;
+        return;
+      }
+    }
+    var chance = favMenu() ? 0.3 : 0.2;
+    if (G.mode === "parent" && G.who === "R") {
+      var d2 = G.tasks.filter(function(x2) {
+        return x2.dinner;
+      })[0];
+      if (d2.done >= d2.ticks && !d2.missed) chance += 0.2;
+      if (G.cheese) chance += 0.3;
+    }
+    if (!choice) {
+      var x = rnd();
+      choice = x < chance ? "fein" : x < chance + 0.35 ? "geht" : "bah";
+    }
+    if (choice === "fein") {
+      G.fein = true;
+      bub("M", "Hm … das ist FEIN!");
+      bub("R", "Er hat FEIN gesagt!!");
+      log("Besonderes Ereignis: M sagt, das Essen schmeckt fein! Mama strahlt den ganzen Abend.", "good");
+      if (G.mode === "kid") {
+        G.sus = Math.max(0, G.sus - 15);
+        if (G.who === "M") G.fun += 3;
+      } else if (G.who === "R") {
+        G.pts += 15;
+        G.stress = Math.max(0, G.stress - 20);
+        log("Mama-Moment des Jahres: +15 Punkte, Stress −20", "good");
+      } else {
+        G.pts += 5;
+        G.stress = Math.max(0, G.stress - 10);
+      }
+    } else if (choice === "geht") {
+      bub("M", "Geht so.");
+      log("M probiert. „Geht so.“ Mama seufzt leise.");
+    } else {
+      bub("M", "Bäh.");
+      bub("R", "Bäh?! Ich hab zwei Stunden gekocht!");
+      log("M schiebt den Teller weg: „Bäh.“ Mama ist beleidigt.", "bad");
+      if (G.mode === "kid") {
+        if (G.who === "M") {
+          G.sus += 5;
+          G.fun += 1;
+        }
+      } else G.stress += G.who === "R" ? 6 : 2;
+    }
+  }
+  function tennisNote() {
+    if (G.t !== 165 || G.mode === "parent" && G.who === "S") return;
+    if (G.tennis) {
+      unlock("tennis");
+      bub("S", "Heute zieh ich’s durch!");
+      log("Papa schnappt sich den Tennisschläger und ist weg! Selten, aber wahr. Bis 17:45 ist er beim Tennis.", "good");
+    } else {
+      bub("S", "Nächste Woche …");
+      log("Papa wollte eigentlich zum Tennis. Er sitzt immer noch im Sessel. „Nächste Woche.“");
+    }
+  }
+  var MISSIONS = {
+    kid: [
+      { id: "zock60", t: "60 min zocken, ohne erwischt zu werden", ok: function() {
+        return G.st.mediaMins >= 60 && G.st.caught === 0;
+      } },
+      { id: "clean", t: "Aufräumtag schaffen", ok: function() {
+        return !!G.st.cleanOK;
+      } },
+      { id: "hw", t: "Hausaufgaben fertig", ok: function() {
+        return G.hw >= 4;
+      } },
+      { id: "blanket", t: "Unter der Bettdecke zocken", ok: function() {
+        return G.st.blanket > 0;
+      } },
+      { id: "ipad", t: "Heimlich YouTube auf Mamas iPad", ok: function() {
+        return G.st.ipad > 0;
+      } },
+      { id: "rober", t: "Mit der Mark-Rober-Ausrede durchkommen", ok: function() {
+        return !!G.st.roberOK;
+      } },
+      { id: "movie", t: "Filmabend erleben", ok: function() {
+        return !!G.movie;
+      } },
+      { id: "cats", t: "Katzen füttern", ok: function() {
+        return !!G.fed;
+      } },
+      { id: "fein", t: "Zu Mamas Essen „fein“ sagen", ok: function() {
+        return !!G.fein;
+      }, only: "M" },
+      { id: "fun25", t: "25 Spaß sammeln", ok: function() {
+        return G.fun >= 25;
+      } }
+    ],
+    parent: [
+      { id: "catch3", t: "3 Kinder erwischen", ok: function() {
+        return G.caught >= 3;
+      } },
+      { id: "tasks", t: "Alle Aufgaben pünktlich", ok: function() {
+        return G.tasks.every(function(x) {
+          return x.done >= x.ticks && !x.missed;
+        });
+      } },
+      { id: "calm", t: "Stress nie über 70 %", ok: function() {
+        return G.st.maxStress <= 70;
+      }, end: true },
+      { id: "clean2", t: "Beide Zimmer um 18 Uhr legofrei", ok: function() {
+        return !!G.st.clean2;
+      } },
+      { id: "movie", t: "Filmabend starten", ok: function() {
+        return !!G.movie;
+      } },
+      { id: "fein", t: "M sagt „fein“ zum Essen", ok: function() {
+        return !!G.fein;
+      }, only: "R" },
+      { id: "tennis", t: "Zum Tennis aufraffen", ok: function() {
+        return !!G.st.tennisOK;
+      }, only: "S" },
+      { id: "nb", t: "Nachbarin N bis zum Ende zuhören", ok: function() {
+        return G.st.listened > 0;
+      } }
+    ]
+  };
+  function pickMissions() {
+    var pool = MISSIONS[G.mode].filter(function(m) {
+      return !m.only || m.only === G.who;
+    }), out = [];
+    while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
+    return out;
+  }
+  function missionOk(m, fin) {
+    return m.end && !fin ? false : !!m.ok();
+  }
+  var ACH = [
+    ["feierabend", "Feierabend", "Ein Spiel bis zum Ende gespielt"],
+    ["unsichtbar", "Unsichtbar", "Als Kind den Tag geschafft, ohne einmal erwischt zu werden"],
+    ["medienprofi", "Medienprofi", "Als Kind 30 Punkte geholt"],
+    ["bettdecke", "Bettdecken-Gamer", "Unter der Bettdecke gezockt, ohne aufzufliegen"],
+    ["ipad", "iPad-Ninja", "Heimlich YouTube auf Mamas iPad geschaut"],
+    ["rober", "Lernvideo!", "Mit der Mark-Rober-Ausrede durchgekommen"],
+    ["akku", "Akku leer", "Die Switch bis auf 0 % gespielt"],
+    ["freifahrt", "Freifahrt", "Gezockt, während Mama telefoniert"],
+    ["fein", "Fein-Moment", "M hat „fein“ zum Essen gesagt"],
+    ["picobello", "Picobello", "Aufräumtag geschafft"],
+    ["lego", "Barfuß-Albtraum", "Dreimal an einem Tag auf Lego getreten"],
+    ["sheriff", "Bildschirm-Sheriff", "Als Elternteil 5 Kinder erwischt"],
+    ["taubenschlag", "Taubenschlag", "6-mal Klingeln an einem Tag"],
+    ["tennis", "Aufgerafft!", "Papa war beim Tennis"],
+    ["dorfnews", "Dorfnachrichten", "Nachbarin N bis zum Ende zugehört"],
+    ["ninja", "Keiner zu Hause", "So getan, als wäre keiner da"],
+    ["filmabend", "Kinoabend", "Einen Filmabend erlebt"],
+    ["missions", "Tagesziele-Profi", "Alle drei Tagesziele an einem Tag geschafft"]
+  ];
+  function achGet() {
+    return store("medienfamilie-ach") || {};
+  }
+  function unlock(id) {
+    var a = achGet();
+    if (a[id]) return;
+    a[id] = 1;
+    store("medienfamilie-ach", a);
+    if (G) {
+      (G.achNew = G.achNew || []).push(id);
+      var t = ACH.filter(function(x) {
+        return x[0] === id;
+      })[0];
+      if (t) log("★ Erfolg freigeschaltet: " + t[1] + "!", "warn");
+    }
+  }
+  function kidTip() {
+    var me = G.who, r = G.pos[me], own = FIG[me].own, R = G.risk || {};
+    if (G.t >= 255 && G.t < 270) return r === "ku" ? { t: "Bleib hier, gleich gibt es " + G.menu + ".", k: "wait" } : { t: "Gleich gibt es " + G.menu + ". Ab in die Küche!", go: "ku" };
+    if (G.t >= 180 && G.t < 240 && G.spuren[own].some(isLego)) return r === own ? { t: "Um 18 Uhr ist Zimmerkontrolle. Räum jetzt das Lego weg!", k: "tidy" } : { t: "Um 18 Uhr ist Zimmerkontrolle, und in deinem Zimmer liegt noch Lego.", go: own };
+    if (G.phone && G.plan && G.plan[G.phone] === "wz") return r === "wz" ? { t: NAME[G.phone] + " kommt gleich ins Wohnzimmer. Handy zurücklegen!", k: "back" } : { t: NAME[G.phone] + " kommt gleich ins Wohnzimmer und vermisst das Handy!", go: "wz" };
+    if (G.swOut && G.akku <= 0) {
+      if (G.hasCable) return r === own ? { t: "Akku leer. Lade die Switch am Kabel.", k: "charge" } : { t: "Akku leer. Lade die Switch in deinem Zimmer.", go: own };
+      if (G.cable === r) return { t: "Hier liegt das Ladekabel!", k: "getcable" };
+      return { t: "Akku leer. Das Ladekabel liegt " + IM[G.cable] + ". Oder die Switch zurück ins Dock.", go: G.cable };
+    }
+    if (R[r] === "red") return { t: "Achtung, hier kommt gleich jemand! Mach etwas Harmloses.", k: G.hw < 4 && r === own ? "hw" : G.spuren[r].length ? "tidy" : "wait" };
+    if (G.movie) return r === "wz" ? { t: "Filmabend! Setz dich dazu.", k: "movie" } : { t: "Filmabend im Wohnzimmer!", go: "wz" };
+    if (inCall()) return r === "wz" ? { t: "Freifahrt! Mama telefoniert. Jetzt zocken!", k: G.swOut ? "yt" : "sw2" } : { t: "Freifahrt! Mama telefoniert. Ab ins Wohnzimmer!", go: "wz" };
+    if (!G.fed && G.t >= 150 && G.t < 270) return r === "ku" ? { t: "Nia hat Hunger. Katzen füttern!", k: "feed" } : { t: "Die Katzen haben Hunger. Geh in die Küche.", go: "ku" };
+    if (R.wz === "green" && !G.swOut) return r === "wz" ? { t: "Das Wohnzimmer ist gerade sicher. Zeit für Minecraft!", k: "sw1" } : { t: "Das Wohnzimmer ist gerade sicher (grün). Ab an die Switch!", go: "wz" };
+    if (R.ku === "green" && G.pos.R !== "ku") return r === "ku" ? { t: "Mamas iPad liegt unbeobachtet hier.", k: "ipad" } : { t: "Mamas iPad liegt in der Küche, und dort ist es gerade sicher.", go: "ku" };
+    if (G.swOut && G.akku > 0 && R[own] !== "red") return r === own ? { t: "Ab unter die Bettdecke und zocken!", k: "blanket" } : { t: "Mit der Switch unter die Bettdecke (dein Zimmer).", go: own };
+    if (!G.swOut && R[own] !== "red" && G.t < 300) return r === "wz" ? { t: "Nimm die Switch aus dem Dock und zock heimlich in deinem Zimmer.", k: "undock" } : { t: "Idee: Switch aus dem Dock holen (Wohnzimmer) und unter der Bettdecke zocken.", go: "wz" };
+    if (G.hw < 4) return r === own ? { t: "Hausaufgaben sind ein gutes Alibi.", k: "hw" } : { t: "Mach zwischendurch Hausaufgaben (dein Zimmer). Gutes Alibi.", go: own };
+    return { t: "Schau auf die Ampeln: Grün heißt sicher." };
+  }
+  function parentTip() {
+    var r = G.pos[G.who];
+    var lit = ORDER.filter(function(rr) {
+      return !roomVis(rr) && G.t >= 240 && ["T", "M"].some(function(k) {
+        return kidRoom(k) === rr && kidMedia(k);
+      });
+    });
+    if (lit.length) return { t: "Bildschirmschein in " + ROOMS[lit[0]] + "! Nachsehen.", go: lit[0] };
+    if (G.t >= 195 && G.t < 240) {
+      var lr = ["kt", "km"].filter(function(rr) {
+        return G.spuren[rr].some(isLego);
+      });
+      if (lr.length) return r === lr[0] ? { t: "Lego! Lass die Kinder aufräumen, bevor um 18 Uhr Kontrolle ist.", k: "Aufräumen lassen" } : { t: "Um 18 Uhr ist Zimmerkontrolle. In " + ROOMS[lr[0]] + " liegt noch Lego.", go: lr[0] };
+    }
+    var open = G.tasks.filter(function(x) {
+      return x.done < x.ticks && !x.missed;
+    }).sort(function(a, b) {
+      return a.due - b.due;
+    })[0];
+    if (G.stress >= 70) return r === "ku" && G.coffee > 0 ? { t: "Stress hoch! Erst mal Kaffee.", k: "Kaffee" } : { t: "Stress hoch! Kaffee (Küche) oder kurz ans Handy (Wohnzimmer)." };
+    if (open && open.due - G.t <= 45) return r === open.room ? { t: "Jetzt " + open.l + ", sonst wird es knapp (bis " + clock(open.due) + ").", k: open.l } : { t: "Als Nächstes: " + open.l + " " + IM[open.room] + " bis " + clock(open.due) + ".", go: open.room };
+    if (G.t >= 300 && !G.movie) return r === "wz" ? { t: "Zeit für den Filmabend!", k: "Filmabend starten" } : { t: "Filmabend im Wohnzimmer starten?", go: "wz" };
+    return { t: "Mach einen Kontrollgang. Wo ist es verdächtig ruhig?" + (open ? " Oder: " + open.l + " " + IM[open.room] + "." : ""), go: open ? open.room : null };
+  }
+  var TUT = {
+    kid: [
+      ["Laufen", "Tippe einen Raum an, um hinzugehen. Als Kind kostet Laufen keine Zeit. Auf dem Handy siehst du dein Zimmer groß und darunter das ganze Haus."],
+      ["Aktionen", "Unten stehen deine Aktionen. Die Zahl rechts ist die Zeit. Blau sind Bildschirme: viel Spaß, aber riskant. Grün ist sicher oder ein Alibi. Der Stern ★ ist der Tipp."],
+      ["Ampel und Ziele", "Der Punkt neben jedem Raumnamen zeigt, ob gleich jemand kommt: grün sicher, gelb vielleicht, rot gleich da. Oben stehen deine drei Tagesziele. Bei 100 % Verdacht ist alles vorbei."]
+    ],
+    parent: [
+      ["Laufen", "Tippe einen Raum an, um hinzugehen. Das kostet 15 Minuten. Räume mit „?“ siehst du gerade nicht. Ab 18 Uhr verrät der Bildschirmschein unter der Tür, wo gezockt wird."],
+      ["Aufgaben", "Deine Aufgaben haben eine Uhrzeit. Verpasst du eine, steigt der Stress. Der Stern ★ zeigt, was jetzt am meisten bringt."],
+      ["Ziele", "Erwische die Kinder vor dem Bildschirm, halte den Stress unter 100 % und schaffe deine drei Tagesziele. Und Vorsicht: Lego!"]
+    ]
+  };
+  function tutorial(mode, who, done) {
+    var cards = TUT[mode], i = 0;
+    function step() {
+      var c = cards[i];
+      dialog(i + 1 + "/" + cards.length + " · " + c[0], who, c[1], [{ l: i < cards.length - 1 ? "Weiter" : "Los geht’s!", f: function() {
+        i++;
+        if (i < cards.length) step();
+        else {
+          closeDlg();
+          store("medienfamilie-tut", 1);
+          if (done) done();
+        }
+      } }], true);
+    }
+    step();
+  }
+  function sheet(html) {
+    $("dlgbox").innerHTML = html + '<div class="choice"><button class="btn go" data-o="0">Schließen</button></div>';
+    $("dlgbox")._opts = [{ f: closeDlg }];
+    $("dlg").hidden = false;
+  }
+  function showAch() {
+    var a = achGet(), best = store("medienfamilie-best") || {}, n = ACH.filter(function(x) {
+      return a[x[0]];
+    }).length;
+    var h = '<h3 class="calm">Erfolge ' + n + "/" + ACH.length + '</h3><div class="achlist">';
+    ACH.forEach(function(x) {
+      h += '<div class="ach' + (a[x[0]] ? "" : " off") + '"><i>' + (a[x[0]] ? "★" : "☆") + "</i><div><b>" + esc(x[1]) + "</b><small>" + esc(x[2]) + "</small></div></div>";
+    });
+    h += '</div><h3 class="calm">Rekorde</h3><table class="stat">';
+    ["T", "M", "S", "R"].forEach(function(k) {
+      h += "<tr><td>" + NAME[k] + "</td><td>" + (best[k] !== void 0 && best[k] !== null ? best[k] : "–") + "</td></tr>";
+    });
+    sheet(h + "</table>");
+  }
+  var LEGO3 = ["Legosteine am Boden", "Legosteine unterm Bett", "Halbes Lego-Raumschiff"];
+  function isLego(n) {
+    return /Lego/.test(n);
+  }
+  function inspector() {
+    return G.call && 240 < G.call ? "S" : "R";
+  }
+  function ringStep() {
+    G.ding = false;
+    G.friendRang = false;
+    ["T", "M"].forEach(function(h2) {
+      var f = G.friends[h2];
+      if (f && G.t >= f.until) {
+        delete G.friends[h2];
+        if (rnd() < 0.5) {
+          G.ding = true;
+          G.rings++;
+          log("DING DONG! Der Besuch von " + h2 + " wird abgeholt.");
+        } else log("Der Besuch von " + h2 + " geht nach Hause.");
+      }
+    });
+    if (G.t >= 30 && G.t <= 225 && rnd() < 0.24) {
+      var free = ["T", "M"].filter(function(h2) {
+        return !G.friends[h2];
+      });
+      if (free.length) {
+        var h = pick(free);
+        G.friends[h] = { until: Math.min(265, G.t + 45 + 15 * Math.floor(rnd() * 4)), look: friendLook(), arr: true };
+        G.ding = true;
+        G.friendRang = true;
+        G.rings++;
+        log("DING DONG! Besuch für " + h + ". Die beiden verschwinden sofort in Zimmer " + h + ".", "hint");
+      }
+    }
+    neighborRing();
+    if (G.ding && !G.chat && !G.pendingNb || G.ding && G.friendRang) {
+      var home = ["R", "S"].filter(function(p2) {
+        return G.pos[p2] && awake(p2) && !(G.mode === "parent" && p2 === G.who);
+      });
+      if (home.length) {
+        var p = home.indexOf("R") >= 0 && rnd() < 0.6 ? "R" : home[0];
+        bub(p, pick(["Schon wieder?!", "Wer ist es DIESMAL?", "Wie im Taubenschlag hier!", "Ich mach nicht mehr auf!"]));
+        if (G.mode === "kid") G.doorP = p;
+      }
+      if (G.mode === "parent") {
+        G.stress += 3;
+        bub(G.who, pick(["Schon wieder die Klingel!", "Haben wir Tag der offenen Tür?", "Ich hab doch Wochenende!"]));
+      }
+    }
+  }
+  var NLOOK = { hair: "#c9c9d1", style: "long", shirt: "#9b6bd6", pants: "#55606e", shoe: "#6b4b3e", noGlasses: true };
+  var FLOOK = { hair: "#e9e1f2", style: "short", extra: "grey", shirt: "#5f8f4f", pants: "#3d4a66", shoe: "#2a2235", noGlasses: true };
+  var N_LINES = ["Habt ihr schon gehört? Beim Bäcker …", "Im Dorf erzählt man sich …", "Die Müllers haben einen neuen Zaun!", "Und dann hat die Frau Schmidt gesagt …", "Der Kerwe-Ausschuss sucht noch Leute!", "Die Straße wird wieder aufgerissen!"];
+  var F_LINES = ["Ach, und noch was …", "Wie läuft’s denn so?", "Das Wetter, ne?", "Habt ihr auch so viele Schnecken?", "Mein Rasenmäher, sag ich dir …"];
+  function neighborRing() {
+    if (G.chat || G.pendingNb || G.t < 30 || G.t > 330) return;
+    var w = null;
+    if ((G.nN || 0) < 2 && rnd() < 0.07) w = "N";
+    else if (!G.nF && rnd() < 0.04) w = "F";
+    if (!w) return;
+    G.ding = true;
+    G.rings++;
+    if (w === "N") G.nN = (G.nN || 0) + 1;
+    else G.nF = 1;
+    var len = w === "N" ? 30 + 15 * Math.floor(rnd() * 3) : 30;
+    if (G.mode === "parent") {
+      G.pendingNb = { who: w, len };
+      return;
+    }
+    var home = ["R", "S"].filter(function(p2) {
+      return G.pos[p2] && awake(p2);
+    });
+    if (!home.length) {
+      log("DING DONG! Nachbarin N klingelt, aber keiner macht auf.");
+      return;
+    }
+    var p = w === "N" && home.indexOf("R") >= 0 ? "R" : home[0];
+    G.chat = { p, who: w, until: G.t + 15 + len, len };
+    G.doorP = null;
+    log((w === "N" ? "DING DONG! Nachbarin N steht am Tor und hat Neuigkeiten aus dem Dorf. " : "DING DONG! Nachbar F will ein bisschen plaudern. ") + NAME[p] + " geht hin. Das kann dauern …", "hint");
+  }
+  function chatTick() {
+    if (!G.chat) return;
+    if (G.t >= G.chat.until) {
+      log((G.chat.who === "N" ? "Nachbarin N" : "Nachbar F") + " verabschiedet sich: „Ich will euch nicht aufhalten …“ Nach " + G.chat.len + " Minuten.");
+      if (G.chat.who === "N") {
+        G.st.listened++;
+        unlock("dorfnews");
+      }
+      G.chat = null;
+      return;
+    }
+    if (G.pos[G.chat.p] === "ga") {
+      if (rnd() < 0.75) bub("NB", pick(G.chat.who === "N" ? N_LINES : F_LINES));
+      if (rnd() < 0.5) bub(G.chat.p, pick(["Ja … aha …", "Spannend.", "Echt jetzt?", "Mhm."]));
+    }
+  }
+  function anyFriend() {
+    return !!(G.friends && (G.friends.T || G.friends.M));
+  }
+  function startKid(k) {
+    var f = FIG[k];
+    G = {
+      mode: "kid",
+      who: k,
+      t: 0,
+      fun: 0,
+      sus: 0,
+      hw: 0,
+      fed: false,
+      dinnerCall: false,
+      dinnerDone: false,
+      phone: null,
+      phoneMiss: false,
+      noise: null,
+      friends: {},
+      rings: 0,
+      st: { mediaMins: 0, caught: 0, blanket: 0, ipad: 0, lego: 0, maxStress: 0, listened: 0 },
+      akku: 100,
+      swOut: false,
+      hasCable: false,
+      chat: null,
+      call: 0,
+      callDone: false,
+      callSleep: false,
+      callEnded: false,
+      generous: false,
+      pos: { S: "wz", R: "ku" },
+      sib: { k: f.sib, pos: FIG[f.sib].own, media: null },
+      cats: {},
+      spuren: { kt: [], km: [], wz: [], ku: [], ga: [] },
+      used: {},
+      log: [],
+      warn: [],
+      lastMedia: -99,
+      lastMediaRoom: null
+    };
+    G.pos[k] = f.own;
+    addSpur(f.own, "Socken von gestern");
+    LEGO3.forEach(function(n) {
+      addSpur(f.own, n);
+    });
+    addSpur(FIG[f.sib].own, "Legosteine am Boden");
+    addSpur(FIG[f.sib].own, "Halbes Lego-Raumschiff");
+    addSpur("wz", "Joy-Con auf dem Sofa");
+    log("Samstag ist Aufräumtag: Bis 18 Uhr muss Zimmer " + k + " legofrei sein. Um 18 Uhr ist Kontrolle.", "warn");
+    initCats();
+    G.menu = pick(MENUS);
+    G.tennis = rnd() < 0.3;
+    G.cable = pick(["kt", "km", "ku", "ga"].filter(function(r) {
+      return r !== f.own;
+    }));
+    G.missions = pickMissions();
+    log("Heute Abend gibt es " + G.menu + "." + (favMenu() ? " T zählt jetzt schon die Minuten." : ""), "hint");
+    log("Papa schläft im Sessel, Mama macht die Küche. Die Switch steht im Wohnzimmer. Direkt neben Papa.");
+    planParents(true);
+    show("game");
+    render();
+  }
+  function planParents(warn) {
+    var nt = G.t + 15, plan = {}, W = [], me = G.pos[G.who];
+    var calling = G.call && nt < G.call;
+    ["S", "R"].forEach(function(p) {
+      var b = base(p, nt), dest = b[1], why = b[2], cur = G.pos[p], ctrl = false, surprise = false, noisy = false;
+      if (calling && (p === "R" || G.callSleep)) {
+        plan[p] = G.pos[p];
+        return;
+      }
+      if (G.chat && G.chat.p === p && nt < G.chat.until) {
+        plan[p] = "ga";
+        return;
+      }
+      if (nt === 240 && p === inspector() && !calling) {
+        var ow = FIG[G.who].own;
+        plan[p] = ow;
+        if (warn) W.push("Gleich 18 Uhr: Zimmerkontrolle! " + NAME[p] + " kommt in " + ROOMS[ow] + ".");
+        return;
+      }
+      if (G.doorP === p && dest && !calling) {
+        plan[p] = "ga";
+        if (warn && cur !== "ga") W.push(NAME[p] + " geht zum Gartentor. Kurz Ruhe.");
+        return;
+      }
+      if (calling) {
+        plan[p] = dest;
+        if (warn && dest !== cur) W.push("Gleich: Papa " + (dest ? b[1] === dest ? b[2] : "geht " + IN[dest] : why) + ".");
+        return;
+      }
+      if (dest === null && cur === null && rnd() < 0.07) {
+        dest = "wz";
+        surprise = true;
+      }
+      if (dest && !surprise && G.noise && !(p === "R" && pstate("R") === "book") && rnd() < 0.5) {
+        dest = G.noise;
+        ctrl = true;
+        noisy = true;
+      } else if (dest && !surprise && !(nt >= 270 && nt < 300) && rnd() < (0.12 + 0.12 * nt / 360) * (anyFriend() ? 0.5 : 1) * (p === "R" && (pstate("R") === "book" || pstate("R") === "ipad") ? 0.4 : 1)) {
+        var tgt = rnd() < 0.6 ? me : pick(["kt", "km", "wz"]);
+        if (tgt !== dest) {
+          dest = tgt;
+          ctrl = true;
+        }
+      }
+      plan[p] = dest;
+      if (warn && dest !== cur && !surprise) {
+        if (noisy) W.push((G.noiseWhy === "musik" ? G.who === "T" ? "Das Schlagzeug hört man im ganzen Haus. " : "Die Gitarre hört man bis unten. " : "Das Fauchen hat man gehört. ") + NAME[p] + " kommt gleich nachsehen!");
+        else if (ctrl) {
+          var near = catsIn(me).concat(catsIn(dest));
+          if (rnd() < 0.45 + 0.15 * near.length) {
+            var c = near.length ? near[0] : pick(CATS);
+            if (c.n === "Nala" && rnd() < 0.5) W.push(cbub("Nala", "Mi…?") + "Nala maunzt die Wand an. Hilft dir nicht wirklich weiter.");
+            else W.push(cbub(c.n, "Miau!") + c.n + " maunzt im Flur: " + NAME[p] + " kommt gleich " + IN[dest] + "!");
+          }
+        } else W.push("Gleich: " + NAME[p] + " " + (dest ? b[1] === dest ? b[2] : "geht " + IN[dest] : why) + ".");
+      }
+    });
+    if (warn) {
+      var RK = {};
+      ORDER.forEach(function(r) {
+        RK[r] = "green";
+      });
+      var home = false;
+      ["S", "R"].forEach(function(p) {
+        var d = plan[p];
+        if (!d) return;
+        var bb = base(p, nt), busy = calling && (p === "R" || G.callSleep) || G.chat && G.chat.p === p && nt < G.chat.until;
+        var sleepy = p === "S" && bb[3] === "sleep" && !G.sAwake && d === bb[1];
+        if (busy) return;
+        if (sleepy) {
+          if (RK[d] === "green") RK[d] = "yellow";
+          return;
+        }
+        home = true;
+        var known = bb[1] === d || W.some(function(w) {
+          return w.indexOf(NAME[p]) >= 0 && (w.indexOf(IN[d]) >= 0 || w.indexOf(ROOMS[d]) >= 0 || w.indexOf("nachsehen") >= 0);
+        });
+        var kd = known ? d : bb[1];
+        if (kd) RK[kd] = "red";
+        if (G.pos[p] && awake(p) && G.pos[p] !== kd && RK[G.pos[p]] === "green") RK[G.pos[p]] = "yellow";
+      });
+      if (home && !calling) ["kt", "km", "wz"].forEach(function(r) {
+        if (RK[r] === "green") RK[r] = "yellow";
+      });
+      G.risk = RK;
+    }
+    G.noise = null;
+    G.noiseWhy = null;
+    if (warn) G.doorP = null;
+    G.plan = plan;
+    if (warn) G.warn = W;
+  }
+  function stepKid() {
+    G.t += 15;
+    ["S", "R"].forEach(function(p) {
+      var d = G.plan[p];
+      if (d !== G.pos[p]) {
+        if (d === null) log(NAME[p] + " " + base(p, G.t)[2] + ".");
+        else if (G.pos[p] === null && base(p, G.t)[1] === null) log(NAME[p] + " kommt plötzlich zurück. Hat was vergessen.", "warn");
+      }
+      G.pos[p] = d;
+    });
+    checkCallEnd();
+    chatTick();
+    if (G.swOut) {
+      var swp = ["S", "R"].filter(function(p) {
+        return G.pos[p] === "wz" && awake(p);
+      });
+      if (swp.length && !G.swMiss && rnd() < 0.45) {
+        G.swMiss = true;
+        G.sus += 8;
+        bub(swp[0], "Wo ist die Switch?!");
+        log(NAME[swp[0]] + " bemerkt: Das Switch-Dock ist leer. Verdacht +8", "bad");
+      }
+    } else G.akku = Math.min(100, G.akku + 10);
+    if (!G.callDone && G.t >= 45 && G.t <= 225 && G.pos.R && rnd() < 0.15) {
+      var sl = rnd() < 0.5;
+      startCall(60 + 15 * Math.floor(rnd() * 3), sl);
+      bub("R", "Bla bla … hihi!");
+      if (!sl) bub("S", "Na gut …");
+      log("Mama telefoniert mit ihren Freundinnen. Auf der Terrasse. Das dauert. " + (sl ? "Und Papa ist im Sessel eingeschlafen." : "Und Papa ist heute großzügig.") + " FREIFAHRT!", "good");
+    }
+    if (!inCall() && G.pos.S && G.pos.R && G.pos.S !== G.pos.R && rnd() < 0.08) {
+      bub("R", "Komm, mach mal mit!");
+      bub("S", "Oh nee …");
+      log("Mama: „" + BANTER[0][1] + "“ Papa: „" + BANTER[1][1] + "“");
+    }
+    tennisNote();
+    if (G.t === 300) {
+      if (G.sus < 60) {
+        G.movie = true;
+        bub("T", "FILMABEND!!");
+        log("Filmabend! Heute läuft ein Marvel-Film im Wohnzimmer. T sitzt schon auf dem Sofa.", "good");
+      } else bub("S", "Noch eine Folge?"), log("Kein Filmabend heute. Papa und Mama schauen ihre Serie. Mama: „Bei dem Verdacht? Vergiss es.“", "bad");
+    }
+    if (G.t === 285) {
+      if (G.who === "M") {
+        if (G.pos.M === "ku") G.pendingDinner = true;
+        else {
+          G.dinnerJudged = true;
+          log("M ist nicht beim Essen. Mama: „Dann eben nicht.“", "bad");
+        }
+      } else dinnerVerdict();
+    }
+    if (G.t === 240) {
+      var own = FIG[G.who].own, lg = G.spuren[own].filter(isLego).length, ip = inspector();
+      if (G.pos[ip] === own) {
+        if (lg) {
+          G.sus += 6;
+          bub(ip, "Aufräumtag, " + G.who + "!!");
+          log("Zimmerkontrolle: überall Lego. Verdacht +6", "bad");
+        } else {
+          G.st.cleanOK = true;
+          unlock("picobello");
+          G.sus = Math.max(0, G.sus - 8);
+          bub(ip, "Picobello!");
+          log("Zimmerkontrolle: Zimmer " + G.who + " ist legofrei. Verdacht −8", "good");
+        }
+      }
+      var so = FIG[G.sib.k].own;
+      log(G.spuren[so].some(isLego) ? "Zimmer " + G.sib.k + " ist voller Lego. " + G.sib.k + " kriegt Ärger." : "Zimmer " + G.sib.k + " ist aufgeräumt.");
+    }
+    ringStep();
+    var sb = G.sib, w = {};
+    w[FIG[sb.k].own] = G.friends[sb.k] ? 14 : 4;
+    w.wz = 4;
+    w.ku = 1;
+    w.ga = 1;
+    sb.pos = wpick(w);
+    if (sb.pos === FIG[sb.k].own && rnd() < 0.3) {
+      var li = G.spuren[sb.pos].findIndex(isLego);
+      if (li >= 0) G.spuren[sb.pos].splice(li, 1);
+    }
+    sb.media = sb.pos === "wz" && rnd() < (inCall() ? 0.95 : 0.65) ? G.swOut ? "Fernseher" : pick(["Switch", "Fernseher"]) : null;
+    ["S", "R"].forEach(function(p) {
+      if (!inCall() && G.pos[p] && G.pos[p] === sb.pos && sb.media && awake(p) && rnd() < 0.5) {
+        bub(p, "Aus jetzt!");
+        bub(sb.k, G.who + " auch!");
+        log(NAME[p] + " erwischt " + sb.k + " " + devDat(sb.media) + ". " + sb.k + ": „" + G.who + " hat auch gezockt!“", "warn");
+        if (G.t - G.lastMedia <= 30) G.sus += 8;
+        sb.media = null;
+      }
+    });
+    if (G.phone) {
+      var o = G.phone;
+      if (G.pos[o] === "wz" && awake(o)) {
+        if (!G.phoneMiss) {
+          G.phoneMiss = true;
+          G.sus += 10;
+          bub(o, "Wo ist mein Handy?!");
+          log(NAME[o] + ": „Wo ist mein Handy?!“ Verdacht +10", "bad");
+        } else G.sus += 3;
+      }
+    }
+    moveCats();
+    if (G.t === 270) {
+      G.dinnerCall = true;
+      bub("R", "Essen ist fertig!");
+      log("Mama ruft: „Essen ist fertig!“", "warn");
+    }
+  }
+  function watchers(room) {
+    return ["S", "R"].filter(function(p) {
+      return G.pos[p] === room;
+    });
+  }
+  function checkSpuren() {
+    if (inCall()) return;
+    ["S", "R"].forEach(function(p) {
+      var r = G.pos[p];
+      if (!r || !awake(p) || !G.spuren[r].length) return;
+      var list = G.spuren[r];
+      G.spuren[r] = [];
+      var cs = catsIn(r);
+      if (cs.length && rnd() < 0.5) {
+        var c = cs[0];
+        log(NAME[p] + " findet " + list.join(", ") + ". „" + c.n + ", warst du das?“" + (c.n === "Nala" && p === "S" ? " Papa guckt Nala streng an." : ""), "good");
+      } else {
+        if (list.some(isLego)) {
+          G.st.lego++;
+          if (G.st.lego >= 3) unlock("lego");
+        }
+        bub(p, list.some(isLego) ? "AUA! Lego!!" : pick(["Wer war das?!", "Kinder!!", "Hm?!"]));
+        G.sus += 6 * list.length;
+        log((list.some(isLego) ? NAME[p] + " tritt barfuß auf Lego. " : "") + NAME[p] + " findet " + list.join(", ") + " " + IM[r] + ": „" + pick(FIND_LINES) + "“", "bad");
+      }
+    });
+  }
+  function checkDinner() {
+    if (!G.dinnerCall || G.dinnerDone || G.t <= 270) return;
+    if (G.pos[G.who] === "ku") {
+      G.dinnerDone = true;
+      G.sus = Math.max(0, G.sus - 3);
+      if (G.who === "T") {
+        G.fun += favMenu() ? 4 : 2;
+        bub("T", favMenu() ? G.menu === "Dampfnudeln" ? "DAMPFNUDELN!!" : "PIZZA!!" : "Nachschlag bitte!");
+        log(favMenu() ? "T isst drei Portionen " + G.menu + ". Persönlicher Rekord. Spaß +4" : "T isst mit großem Appetit. Spaß +2", "good");
+      } else log("Mitgegessen: " + G.menu + ". Alle zufrieden.", "good");
+    } else {
+      G.sus += 8;
+      log("Mama: „Wo bleibst du denn? Das Essen wird kalt!“", "bad");
+    }
+  }
+  function kidDo(key) {
+    var a = KID_ACTS[key], room = G.pos[G.who], done = 0, caught = null, praised = false, together = false;
+    G.warn = [];
+    if (a.task === "tidy") {
+      var n = Math.min(2, G.spuren[room].length);
+      G.spuren[room].splice(0, n);
+      log("Aufgeräumt: " + n + (n === 1 ? " Spur" : " Spuren") + " weg." + (G.spuren[room].length ? " Da liegt aber noch mehr." : " Alles sauber!"), "good");
+    }
+    if (a.task === "cat") {
+      var cs = CATS.filter(function(c2) {
+        return G.cats[c2.n] !== room;
+      });
+      if (cs.length) {
+        var c = pick(cs);
+        G.cats[c.n] = room;
+        log(c.n + " trabt an und legt sich hin. Jetzt hört hier jemand mit.");
+      }
+    }
+    if (a.task === "grab") {
+      G.phone = inCall() ? "S" : (G.pos.S === "wz" || !G.pos.S) && pstate("S") !== "sleep" ? "R" : "S";
+      G.phoneMiss = false;
+      log(NAME[G.phone] + "s Handy lag im Sessel. Jetzt nicht mehr.", "hint");
+    }
+    if (a.task === "wanders") {
+      log("Wanders sitzt jetzt hinter dem Vorhang. Gleich hört man T: „WO IST WANDERS?!“", "hint");
+      if (rnd() < 0.5) {
+        G.sus += 4;
+        log("T petzt: „M war das!“ Verdacht +4", "bad");
+      }
+    }
+    if (a.noise) {
+      bub(G.who, key === "drum" ? "BUMM TSCHAK!" : "Pling plong …");
+      G.noise = room;
+      G.noiseWhy = "musik";
+      if (key === "drum" && G.pos.S === "wz" && pstate("S") === "sleep") {
+        G.sAwake = true;
+        log("Papa schreckt im Sessel hoch. Das Nickerchen ist vorbei.", "warn");
+      }
+    }
+    if (a.task === "movie" && G.who === "T") {
+      G.fun += 2;
+      if (rnd() < 0.5) bub("T", pick(["Der Teil ist der beste!", "Gleich kommt die Stelle!", "Noch ein Film?"]));
+    }
+    if (a.task === "undock") {
+      G.swOut = true;
+      G.swMiss = false;
+      log("Switch aus dem Dock genommen. Das Dock ist jetzt verdächtig leer. Akku: " + G.akku + " %", "hint");
+    }
+    if (a.task === "dock") {
+      G.swOut = false;
+      G.swMiss = false;
+      log("Switch wieder im Dock. Sie lädt.", "good");
+    }
+    if (a.task === "getcable") {
+      G.hasCable = true;
+      log("Ladekabel gefunden und eingesteckt. In die Hosentasche.", "good");
+    }
+    if (a.task === "charge") {
+      G.akku = Math.min(100, G.akku + 50);
+      log("Switch lädt am Kabel. Akku: " + G.akku + " %", "good");
+    }
+    if (a.task === "back") {
+      log(NAME[G.phone] + "s Handy liegt wieder im Sessel. Als wäre nichts gewesen.", "good");
+      G.phone = null;
+      G.phoneMiss = false;
+    }
+    for (var i = 0; i < a.ticks; i++) {
+      if (i > 0) planParents(false);
+      stepKid();
+      var ps = watchers(room), aw = ps.filter(awake);
+      if (a.media && inCall() && ps.length) {
+        if (aw.length && !G.generous) {
+          G.generous = true;
+          bub("S", "Na gut. Noch eine Runde.");
+          log("Papa: „Na gut. Aber wenn Mama auflegt, ist Schluss.“", "good");
+        }
+        ps = [];
+        aw = [];
+      }
+      if (a.media && ps.length) {
+        if (aw.length) {
+          if (a.hide && rnd() < a.hide) {
+            bub(aw[0], "Schläft der etwa schon?");
+            log(NAME[aw[0]] + " schaut rein. Unter der Bettdecke ist es mucksmäuschenstill. Glück gehabt!", "good");
+          } else {
+            caught = aw[0];
+            break;
+          }
+        }
+        if (rnd() < 0.3) {
+          caught = ps[0];
+          bub("S", "Hä?! Was?!");
+          log("Papa schreckt aus dem Nickerchen hoch.", "warn");
+          break;
+        }
+      }
+      if (a.media) {
+        G.lastMedia = G.t;
+        G.lastMediaRoom = room;
+        if (G.sib.pos === room && G.sib.media && !together) {
+          together = true;
+          G.fun += 1;
+          log("Zu zweit macht Minecraft mehr Spaß. +1");
+        }
+      }
+      if (aw.length && !praised) {
+        if (a.task === "hw") {
+          praised = true;
+          G.sus = Math.max(0, G.sus - 8);
+          bub(aw[0], "Hausaufgaben?!");
+          log(NAME[aw[0]] + ": „Hausaufgaben? Wer bist du und was hast du mit " + G.who + " gemacht?“", "good");
+        } else if (a.task === "alibi") {
+          praised = true;
+          G.sus = Math.max(0, G.sus - 4);
+          bub(aw[0], key === "drum" ? "Leiser bitte!" : "Sehr schön!");
+          log(NAME[aw[0]] + ": „" + ({ tramp: "Schön, frische Luft!", chess: "Schach! Sehr gut.", comic: "Lesen! Sehr schön.", lego: "Was baust du da Schönes?", drum: "Schön geübt! Aber leiser bitte.", guitar: "Schön geübt!", kick: "Schöner Schuss!", visit: "Schön, dass ihr zusammen spielt!" }[key] || "Sehr schön!") + "“", "good");
+        } else if (a.task === "feed") {
+          praised = true;
+          G.sus = Math.max(0, G.sus - 3);
+          bub(aw[0], "Danke!");
+          log(NAME[aw[0]] + ": „Danke fürs Füttern!“", "good");
+        }
+      }
+      checkSpuren();
+      checkDinner();
+      done++;
+    }
+    if (a.fun) G.fun += Math.round(a.fun * done / a.ticks);
+    if (a.task === "hw") {
+      G.hw = Math.min(4, G.hw + done);
+      if (G.hw >= 4) log("Hausaufgaben fertig. Jetzt hast du ein echtes Alibi.", "good");
+    }
+    if (a.task === "feed" && done) {
+      G.fed = true;
+      cbub("Nia", "Mehr!!");
+      if (!praised) log("Futter! Nia frisst ihren Napf in Rekordzeit leer und dann den von Nala. Nala guckt verwirrt.");
+    }
+    if (a.spur && done > 0 && rnd() < a.sp) {
+      var s = pick(a.spur);
+      addSpur(room, s);
+      log("Zurück bleibt: " + s + ".", "hint");
+    }
+    if (a.media && done && !caught) {
+      G.st.mediaMins += 15 * done;
+      if (inCall()) unlock("freifahrt");
+    }
+    if (key === "blanket" && done && !caught) {
+      G.st.blanket++;
+      unlock("bettdecke");
+      G.akku = Math.max(0, G.akku - 25 * done);
+      if (G.akku <= 0) {
+        unlock("akku");
+        log("Akku leer! Die Switch ist aus. Ladekabel suchen oder zurück ins Dock.", "bad");
+      } else if (G.akku <= 25) log("Akku fast leer: " + G.akku + " %", "warn");
+    }
+    if (key === "blanket" && caught) {
+      G.swOut = false;
+      G.swMiss = false;
+    }
+    if (key === "ipad" && done && !caught) {
+      G.st.ipad++;
+      unlock("ipad");
+    }
+    G.meAct = key;
+    G.meMedia = caught ? null : a.media || null;
+    G.meEdu = !!a.edu;
+    if (caught) {
+      checkSpuren();
+      kidCaught(caught, a);
+      return;
+    }
+    finishKid();
+  }
+  function kidCaught(p, a) {
+    G.st.caught++;
+    var cs = catsIn(G.pos[G.who]), cat = cs.length ? cs[0] : pick(CATS), title = "Erwischt!";
+    var catP = cs.length ? cat.n === "Nala" && p === "S" ? 0.65 : 0.45 : 0.15;
+    if (a.media === "Handy") {
+      title = NAME[p] === NAME[G.phone] ? "Mein Handy?!" : "Erwischt!";
+    }
+    var EXC = [
+      { id: "rober", l: "„Das ist Mark Rober! Da lernen wir was über Technik und das Leben.“", p: a.edu ? 0.85 : a.media === "Fernseher" ? 0.45 : a.media === "Handy" ? 0.35 : 0.1 },
+      { id: "auch", l: "„Du sitzt doch auch dauernd am Handy!“", p: a.media === "Handy" ? 0.5 : 0.3 },
+      { id: "geschw", l: "„" + G.sib.k + " hat angefangen!“", p: G.sib.pos === G.pos[G.who] ? 0.7 : 0.3 },
+      { id: "hwdone", l: "„Hausaufgaben sind schon fertig!“", p: G.hw >= 4 ? 0.9 : 0.1 },
+      { id: "katze", l: "„" + cat.n + " ist auf die Fernbedienung getreten!“", p: catP }
+    ].filter(function(e) {
+      return !G.used[e.id];
+    }).sort(function(x, y) {
+      return y.p - x.p;
+    });
+    var opts = EXC.slice(0, 3).map(function(e) {
+      return { l: e.l, d: "Ausrede (nur einmal)", f: function() {
+        G.used[e.id] = true;
+        if (rnd() < e.p) {
+          if (e.id === "rober") {
+            G.st.roberOK = true;
+            unlock("rober");
+          }
+          G.sus += 10;
+          result(p, e.id === "auch" ? "… Touché. Trotzdem: aus jetzt." : "Na gut. Aber jetzt ist Schluss.", "Verdacht +10");
+        } else {
+          G.sus += 35;
+          result(p, e.id === "katze" && cat.n === "Nala" ? "Nala findet nicht mal ihren Napf. Gerät her." : "Netter Versuch. Gerät her.", "Verdacht +35");
+        }
+      } };
+    });
+    opts.push({ l: "Zugeben", d: "Ehrlich währt am längsten", f: function() {
+      G.sus += 20;
+      result(p, "Danke für die Ehrlichkeit. Trotzdem: aus.", "Verdacht +20");
+    } });
+    if (a.media === "Handy") {
+      G.phone = null;
+      G.phoneMiss = false;
+    }
+    dialog(title, p, pick(CATCH_LINES) + " (" + a.media + ")", opts);
+    function result(p2, line, eff) {
+      bub(p2, eff.indexOf("35") >= 0 ? "Gerät her!" : "Na gut …");
+      log(NAME[p2] + ": „" + line + "“ " + eff, "bad");
+      dialog(eff, p2, line, [{ l: "Weiter", f: function() {
+        closeDlg();
+        finishKid();
+      } }], true);
+    }
+  }
+  function finishKid() {
+    G.sus = clamp(G.sus, 0, 100);
+    if (G.sus >= 100) return endGame(false);
+    if (G.t >= END) return endGame(true);
+    planParents(true);
+    render();
+    if (G.pendingDinner) {
+      G.pendingDinner = false;
+      var pick3 = function(c) {
+        return function() {
+          dinnerVerdict(c);
+          closeDlg();
+          G.sus = clamp(G.sus, 0, 100);
+          render();
+        };
+      };
+      dialog("Abendessen", "R", "Mama hat gekocht. Alle gucken dich an. Wie schmeckt’s, M?", [
+        { l: "„Bäh.“", d: "Ehrlich. Spaß +1, aber Mama ist beleidigt (Verdacht +5)", f: pick3("bah") },
+        { l: "„Geht so.“", d: "Diplomatisch", f: pick3("geht") },
+        { l: "„Mmmh … das ist fein!“", d: "Die Challenge! Mama strahlt: Verdacht −15, Spaß +3", f: pick3("fein") }
+      ], true);
+    }
+  }
+  function kidActionList() {
+    var me = G.who, r = G.pos[me], own = FIG[me].own, L = [];
+    if (r === own) {
+      if (G.friends[me]) L.push("visit");
+      if (G.hw < 4) L.push("hw");
+      if (me === "T") L.push("lego", "drum", "comic");
+      else L.push("chess", "guitar");
+    }
+    if (r === own && G.swOut) {
+      if (G.akku > 0) L.push("blanket");
+      if (G.hasCable && G.akku < 100) L.push("charge");
+    }
+    if (G.cable === r && !G.hasCable) L.push("getcable");
+    if (r === "kt" && me === "M") L.push("wanders");
+    if (r === "wz" && G.movie) L.push("movie");
+    if (r === "wz") {
+      if (!G.swOut) L.push("sw1", "sw2");
+      L.push("yt", "rober");
+      L.push(G.swOut ? "dock" : "undock");
+      if (G.phone) L.push("back");
+      else if (!watchers("wz").filter(awake).length) L.push("grab");
+    }
+    if (r === "ku") {
+      L.push("snack");
+      if (!G.fed) L.push("feed");
+      if (G.pos.R !== "ku") L.push("ipad");
+    }
+    if (r === "ga") {
+      L.push("tramp");
+      if (me === "M") L.push("kick");
+    }
+    if (G.phone) L.push("phone");
+    if (r === own) L.push("cat");
+    if (G.spuren[r].length) L.push("tidy");
+    L.push("wait");
+    return L;
+  }
+  function startParent(p) {
+    G = {
+      mode: "parent",
+      who: p,
+      q: p === "S" ? "R" : "S",
+      t: 0,
+      stress: 0,
+      pts: 0,
+      caught: 0,
+      found: 0,
+      coffee: 2,
+      wlan: 0,
+      wlanUsed: false,
+      appUsed: false,
+      reveal: false,
+      meState: "",
+      friends: {},
+      rings: 0,
+      st: { mediaMins: 0, caught: 0, blanket: 0, ipad: 0, lego: 0, maxStress: 0, listened: 0 },
+      akku: 100,
+      swOut: false,
+      hasCable: false,
+      chat: null,
+      call: 0,
+      callDone: false,
+      callSleep: false,
+      callEnded: false,
+      pos: {},
+      kids: { T: { pos: "kt", media: null, g: 0, mins: 0 }, M: { pos: "km", media: null, g: 0, mins: 0 } },
+      cats: {},
+      spuren: { kt: [], km: [], wz: [], ku: [], ga: [] },
+      log: [],
+      warn: [],
+      tasks: TASKS[p].map(function(x) {
+        return { l: x.l, room: x.room, ticks: x.ticks, due: x.due, dinner: !!x.dinner, done: 0, missed: false };
+      })
+    };
+    G.pos[p] = p === "S" ? "wz" : "ku";
+    G.pos[G.q] = base(G.q, 0)[1];
+    initCats();
+    updateKids([G.pos[p], G.pos[G.q]]);
+    addSpur("wz", "Joy-Con auf dem Sofa");
+    ["kt", "km"].forEach(function(r) {
+      LEGO3.forEach(function(n) {
+        if (rnd() < 0.8) addSpur(r, n);
+      });
+    });
+    log("Samstag ist Aufräumtag. Um 18 Uhr ist Zimmerkontrolle. Bis dahin: Vorsicht, Lego!", "warn");
+    G.menu = pick(MENUS);
+    G.tennis = p !== "S" && rnd() < 0.3;
+    G.missions = pickMissions();
+    log("Heute Abend gibt es " + G.menu + "." + (favMenu() ? " T fragt schon jetzt, wann es Essen gibt." : ""), "hint");
+    log(p === "S" ? "Du wachst im Sessel auf. Die Kinder sind „oben, Hausaufgaben machen“. Klar." : "Die Küche wartet. Die Kinder sind „oben, Hausaufgaben machen“. Klar.");
+    show("game");
+    render();
+  }
+  function deviceFor(k, r) {
+    if (r === "wz") return rnd() < (inCall() || G.rBook ? 0.97 : 0.8) ? pick(["Switch", "Fernseher"]) : null;
+    if (r === FIG[k].own) {
+      var x = rnd();
+      return x < 0.15 ? "Handy" : x < 0.3 ? "Switch" : null;
+    }
+    if (r === "ku" && G.pos.R !== "ku" && rnd() < 0.35) return "iPad";
+    return null;
+  }
+  function updateKids(avoid) {
+    ["T", "M"].forEach(function(k) {
+      var K = G.kids[k];
+      if (G.movie) {
+        K.pos = "wz";
+        K.media = null;
+        return;
+      }
+      if (K.g > 0) {
+        K.g--;
+        K.pos = FIG[k].own;
+        K.media = null;
+        return;
+      }
+      var w = {};
+      w[FIG[k].own] = G.friends[k] ? 90 : 35;
+      w[FIG[k].own === "kt" ? "km" : "kt"] = 5;
+      w.wz = 40;
+      w.ku = 8;
+      w.ga = 12;
+      avoid.forEach(function(r) {
+        if (r) w[r] = 0;
+      });
+      K.pos = wpick(w);
+      var dev = deviceFor(k, K.pos);
+      if (G.wlan > 0 && dev && dev !== "Switch") dev = null;
+      K.media = dev;
+      if (dev) {
+        K.mins += 15;
+        if (rnd() < 0.35) addSpur(K.pos, pick({ Switch: ["warme Switch", "Joy-Con auf dem Sofa"], iPad: ["iPad-Verlauf voller Gameplay"], Handy: ["Handy unterm Kissen"], Fernseher: ["Decke am Boden", "warme Fernbedienung"] }[dev]));
+      } else if (K.pos === "ku" && rnd() < 0.5) addSpur("ku", "Chipskrümel");
+      if (!dev && K.pos === FIG[k].own && rnd() < 0.2) {
+        var li = G.spuren[K.pos].findIndex(isLego);
+        if (li >= 0) G.spuren[K.pos].splice(li, 1);
+      }
+    });
+  }
+  function stepParent(dest) {
+    G.t += 15;
+    G.reveal = false;
+    G.warn = [];
+    checkCallEnd();
+    if (G.who === "S" && !G.callDone && G.t >= 45 && G.t <= 225 && G.pos.R && rnd() < 0.15) {
+      startCall(60 + 15 * Math.floor(rnd() * 3), false);
+      bub("R", "Bla bla …");
+      log("Mama telefoniert mit ihren Freundinnen. Das dauert. Du bist jetzt allein zuständig. Oben jubelt jemand.", "warn");
+    }
+    chatTick();
+    var q = G.q, b = base(q, G.t), qd = b[1];
+    if (G.chat && G.chat.p === q && G.t < G.chat.until) qd = "ga";
+    else if (inCall()) {
+      qd = q === "R" ? "ga" : G.callSleep ? "wz" : qd;
+    } else if (qd !== G.pos[q]) log(NAME[q] + " " + b[2] + ".");
+    G.pos[q] = qd;
+    updateKids([G.pos[G.who]].concat(awake(q) ? [qd] : []));
+    if (dest) G.pos[G.who] = dest;
+    if (qd && awake(q) && !inCall() && !(G.t >= 270 && G.t < 300) && rnd() < 0.12) {
+      var kr = pick(["kt", "km", "wz"]);
+      G.pos[q] = kr;
+      ["T", "M"].forEach(function(k) {
+        var K = G.kids[k];
+        if (K.pos === kr && K.media && rnd() < 0.6) {
+          G.pts += 5;
+          G.caught++;
+          K.g = 3;
+          bub(q, "Erwischt!");
+          log(NAME[q] + " macht einen Kontrollgang und erwischt " + k + " " + devDat(K.media) + ". +5", "good");
+          K.media = null;
+        }
+      });
+    }
+    if (G.pos.S && G.pos.R && rnd() < 0.12) {
+      if (G.who === "S") {
+        bub("R", "Komm, mach mal mit!");
+        log("Mama: „" + BANTER[0][1] + "“", "warn");
+        G.stress += 2;
+      } else if (G.pos.S === "wz") {
+        bub("S", "Oh nee …");
+        log("Papa aus dem Sessel: „" + BANTER[1][1] + "“", "warn");
+        G.stress += 2;
+      }
+    }
+    ringStep();
+    moveCats();
+    if (G.wlan > 0) {
+      G.wlan--;
+      if (!G.wlan) log("Das WLAN ist wieder an. Von oben hört man Jubel.");
+    }
+    G.stress += 1 + Math.floor(totalSpuren() / 3);
+    G.tasks.forEach(function(x) {
+      if (!x.missed && x.done < x.ticks && G.t >= x.due) {
+        x.missed = true;
+        G.stress += 12;
+        log("Nicht geschafft: " + x.l + ". Stress +12", "bad");
+      }
+    });
+    if (G.t === 285) dinnerVerdict();
+    tennisNote();
+    if (G.t === 240 && !["kt", "km"].some(function(r2) {
+      return G.spuren[r2].some(isLego);
+    })) {
+      G.st.clean2 = true;
+      unlock("picobello");
+    }
+    if (G.t === 240) {
+      ["kt", "km"].forEach(function(r2) {
+        var k = r2 === "kt" ? "T" : "M";
+        if (G.spuren[r2].some(isLego)) {
+          G.stress += 5;
+          log("Zimmerkontrolle: Zimmer " + k + " ist voller Lego. Aufräumtag verpasst! Stress +5", "bad");
+        } else {
+          G.pts += 5;
+          log("Zimmerkontrolle: Zimmer " + k + " ist legofrei. +5", "good");
+        }
+      });
+    }
+    if (G.t === 270) {
+      var dn = G.tasks.filter(function(x) {
+        return x.dinner;
+      })[0];
+      if (dn.done < dn.ticks) {
+        G.stress += 10;
+        log("Kein Essen fertig. Es gibt Pizza vom Lieferdienst. Stress +10", "bad");
+      } else log("Essen! Alle sitzen am Tisch, sogar die Katzen gucken zu.", "good");
+    }
+    if (rnd() < 0.45) {
+      var mr = mediaRooms().filter(function(r2) {
+        return r2 !== G.pos[G.who];
+      });
+      if (mr.length) {
+        var r = pick(mr), c = pick(CATS.filter(function(x) {
+          return x.n !== "Nala";
+        }));
+        G.cats[c.n] = r;
+        G.warn.push(c.n + " schleicht " + IN[r] + ". Da ist irgendwas schön warm …");
+      }
+    }
+  }
+  function arrival(r) {
+    var caught = [];
+    if ((r === "kt" || r === "km") && G.spuren[r].some(isLego)) {
+      G.stress += 3;
+      bub(G.who, "AUA!! Lego!");
+      log("Du trittst in " + ROOMS[r] + " barfuß auf einen Legostein. Stress +3", "bad");
+      G.st.lego++;
+      if (G.st.lego >= 3) unlock("lego");
+    }
+    ["T", "M"].forEach(function(k) {
+      var K = G.kids[k];
+      if (K.pos !== r || !K.media) return;
+      var notice = 0.3 + (catsIn(r).length ? 0.25 : 0) - (G.t >= 240 ? 0.1 : 0);
+      if (rnd() < notice) {
+        var w = warmSpur(K.media);
+        log(k + " sitzt auffällig brav da. Aber da liegt: " + w + ".", "hint");
+        addSpur(r, w);
+        K.media = null;
+      } else caught.push(k);
+    });
+    if (!caught.length) return afterParent();
+    caught.slice(1).forEach(function(k) {
+      var K = G.kids[k];
+      G.pts += 8;
+      G.caught++;
+      K.g = 2;
+      log(k + " ist auch dabei. Ermahnt. +8", "good");
+      K.media = null;
+    });
+    parentCaught(caught[0]);
+  }
+  function parentCaught(k) {
+    var K = G.kids[k], dev = K.media;
+    var line = G.friends[k] && rnd() < 0.6 ? "Aber wir haben doch Besuch!" : pick(KID_LINES).replace("{sib}", FIG[k].sib);
+    var opts = [
+      { l: "Gerät einkassieren", d: "+15 Punkte · 90 min Ruhe", f: function() {
+        G.pts += 15;
+        G.caught++;
+        K.g = 6;
+        K.media = null;
+        G.stress = Math.max(0, G.stress - 4);
+        log(k + " muss " + (dev === "iPad" ? "Mamas iPad" : dev === "Handy" ? "dein Handy" : dev === "Fernseher" ? "die Fernbedienung" : "die Switch") + " abgeben. +15", "good");
+        closeDlg();
+        afterParent();
+      } },
+      { l: "Ermahnen", d: "+8 Punkte · 30 min Ruhe", f: function() {
+        G.pts += 8;
+        G.caught++;
+        K.g = 2;
+        K.media = null;
+        G.stress = Math.max(0, G.stress - 1);
+        log("Ermahnung an " + k + ". +8", "good");
+        closeDlg();
+        afterParent();
+      } }
+    ];
+    if (dev === "Switch") opts.push({ l: "Eine Runde Minecraft mitspielen", d: "+4 Punkte · Stress −10 · 15 min", f: function() {
+      G.pts += 4;
+      G.stress = Math.max(0, G.stress - 10);
+      log("Eine Runde. Nur eine. " + NAME[G.who] + " fällt in Lava.", "good");
+      closeDlg();
+      stepParent(null);
+      afterParent();
+    } });
+    bub(k, "Nur noch kurz!");
+    dialog(dev === "Handy" ? "Ist das MEIN Handy?!" : "Erwischt!", k, "„" + line + "“ (" + dev + ")", opts);
+  }
+  function afterParent() {
+    G.stress = clamp(G.stress, 0, 100);
+    G.st.maxStress = Math.max(G.st.maxStress, G.stress);
+    if (G.pendingNb && G.stress < 100 && G.t < END) {
+      var nb = G.pendingNb;
+      G.pendingNb = null;
+      render();
+      var nm = nb.who === "N" ? "Nachbarin N" : "Nachbar F";
+      var opts = [{ l: "Hingehen und zuhören", d: nb.len + " min · Stress +6 · gute Nachbarschaft +3", f: function() {
+        closeDlg();
+        var back = G.pos[G.who];
+        G.meState = "";
+        G.chat = { p: G.who, who: nb.who, until: G.t + nb.len, len: nb.len };
+        G.pos[G.who] = "ga";
+        while (G.chat && G.t < END) stepParent(null);
+        G.stress += 6;
+        G.pts += 3;
+        G.pos[G.who] = back;
+        afterParent();
+      } }];
+      if (G.pos[G.q] && awake(G.q)) opts.push({ l: (G.q === "S" ? "Papa" : "Mama") + " soll hingehen", d: "Du hast Ruhe, aber " + (G.q === "S" ? "Papa" : "Mama") + " ist erst mal weg", f: function() {
+        closeDlg();
+        G.chat = { p: G.q, who: nb.who, until: G.t + 15 + nb.len, len: nb.len };
+        bub(G.q, "Warum immer ich?!");
+        render();
+      } });
+      opts.push({ l: "So tun, als wäre keiner da", d: "Stress +2 · es klingelt noch zweimal", f: function() {
+        closeDlg();
+        G.stress += 2;
+        G.rings += 2;
+        unlock("ninja");
+        log(nm + " klingelt noch zweimal und geht dann. Puh.");
+        render();
+      } });
+      dialog("DING DONG!", G.who, nm + (nb.who === "N" ? " steht am Gartentor und hat Neuigkeiten aus dem Dorf." : " steht am Tor und will ein bisschen plaudern."), opts);
+      return;
+    }
+    if (G.stress >= 100) return endGame(false);
+    if (G.t >= END) return endGame(true);
+    render();
+  }
+  function parentMove(r) {
+    if (r === G.pos[G.who]) return;
+    G.meState = "";
+    stepParent(r);
+    arrival(r);
+  }
+  function doTask(i) {
+    var x = G.tasks[i];
+    G.meState = { "Fußball schauen": "tv", "Rasen mähen": "mow", "Grillen": "grill", "Kochen": "cook", "Küche machen": "cook" }[x.l] || "";
+    while (x.done < x.ticks && G.t < END) {
+      stepParent(null);
+      x.done++;
+      if (G.rBook && x.room === "ku") G.stress = Math.max(0, G.stress - 2);
+    }
+    if (x.done >= x.ticks) {
+      G.stress = Math.max(0, G.stress - 3);
+      log("Erledigt: " + x.l + ".", "good");
+    }
+    afterParent();
+  }
+  function parentActions() {
+    var r = G.pos[G.who], L = [];
+    G.tasks.forEach(function(x, i) {
+      if (x.room === r && x.done < x.ticks) L.push({ l: x.l, d: (x.ticks - x.done) * 15 + " min · " + (x.missed ? "zu spät" : "bis " + clock(x.due)), cls: "safe", f: function() {
+        doTask(i);
+      } });
+    });
+    var n = G.spuren[r].length;
+    if (n) L.push({ l: "Aufräumen lassen", d: "15 min · +" + 3 * n + " Punkte", f: function() {
+      G.meState = "";
+      G.pts += 3 * n;
+      G.found += n;
+      G.spuren[r] = [];
+      log("„Kinder! Runterkommen und aufräumen!“ " + n + (n === 1 ? " Spur" : " Spuren") + " weg. +" + 3 * n, "good");
+      stepParent(null);
+      afterParent();
+    } });
+    if (r === "wz") L.push({ l: "Im Sessel ans Handy", d: "15 min · Stress −8", cls: "media", f: function() {
+      G.meState = "phone";
+      G.stress = Math.max(0, G.stress - 8);
+      stepParent(null);
+      if (rnd() < 0.4) {
+        var k = pick(["T", "M"]);
+        bub(k, "Und DU am Handy?!");
+        log(k + " steckt den Kopf rein: „Und warum darfst DU ans Handy?“ Stress +3", "warn");
+        G.stress += 3;
+      } else log(NAME[G.who] + " scrollt. Nur kurz. Wirklich.");
+      afterParent();
+    } });
+    if (G.who === "R" && !G.callDone && G.t <= 270) L.push({ l: "Freundinnen anrufen", d: "1 Stunde · Stress −20 · Papa passt auf (oder schläft)", cls: "media", f: function() {
+      G.meState = "call";
+      startCall(60, true);
+      bub("R", "Hallöchen!");
+      log("Du telefonierst mit deinen Freundinnen. Papa soll aufpassen. Papa schläft.", "warn");
+      for (var i = 0; i < 4 && G.t < END; i++) stepParent(null);
+      G.meState = "";
+      G.stress = Math.max(0, G.stress - 20);
+      log("Eine Stunde später. Bildschirmzeit bisher: T " + G.kids.T.mins + " min, M " + G.kids.M.mins + " min. Hm.", "hint");
+      afterParent();
+    } });
+    if (G.who === "R" && r === "ku") L.push({ l: G.rBook ? "Hörbuch aus" : "Hörbuch an", d: G.rBook ? "0 min · wieder alles hören" : "0 min · Küchenarbeit entspannter, aber du hörst nichts", cls: "safe", f: function() {
+      G.rBook = !G.rBook;
+      log(G.rBook ? "Hörbuch an. Die Küche wird zur Wohlfühlzone. Was oben passiert? Keine Ahnung." : "Hörbuch aus. Ah, da ist ja wieder Lärm.");
+      render();
+    } });
+    if (G.who === "R" && r === "ku" && !G.cheese && G.t < 270) L.push({ l: "Extra Käse drüber", d: "15 min · M sagt vielleicht „fein“", cls: "safe", f: function() {
+      G.meState = "cook";
+      G.cheese = true;
+      bub("R", "Diesmal sagt er fein!");
+      log("Geheimwaffe: extra Käse. Und ein bisschen Liebe.");
+      stepParent(null);
+      afterParent();
+    } });
+    if (r === "wz" && G.t >= 300 && !G.movie) L.push({ l: "Filmabend starten", d: "15 min · Stress −15 · Marvel-Film, T jubelt", cls: "media", f: function() {
+      G.movie = true;
+      G.meState = "tv";
+      G.stress = Math.max(0, G.stress - 15);
+      G.pts += 5;
+      bub("T", "FILMABEND!!");
+      bub("M", "Ich hol Fuffi!");
+      log("Filmabend! Alle auf dem Sofa, ein Marvel-Film läuft. T kennt jeden Satz auswendig. +5", "good");
+      stepParent(null);
+      afterParent();
+    } });
+    if (G.who === "S" && r === "wz" && !G.tennisTried && G.t >= 150 && G.t <= 210) L.push({ l: "Zum Tennis aufraffen", d: "1 Stunde · klappt selten · Stress −25", cls: "safe", f: function() {
+      G.tennisTried = true;
+      G.meState = "";
+      if (rnd() < 0.35) {
+        G.tennis = true;
+        G.st.tennisOK = true;
+        unlock("tennis");
+        bub("S", "Heute zieh ich’s durch!");
+        log("Du schnappst dir den Tennisschläger. Eine Stunde Tennis! Stress −25", "good");
+        G.stress = Math.max(0, G.stress - 25);
+        G.pts += 5;
+        G.pos.S = "ga";
+        for (var i = 0; i < 4 && G.t < END; i++) stepParent(null);
+        G.pos.S = "wz";
+        G.tennis = false;
+        log("Zurück vom Tennis. Was war hier los? Bildschirmzeit: T " + G.kids.T.mins + " min, M " + G.kids.M.mins + " min.", "hint");
+      } else {
+        bub("S", "Nächste Woche …");
+        log("Du ziehst die Tennisschuhe an. Und wieder aus. „Nächste Woche.“ Stress +2");
+        G.stress += 2;
+        stepParent(null);
+      }
+      afterParent();
+    } });
+    if (r === "ku" && G.coffee > 0) L.push({ l: "Kaffee", d: "15 min · Stress −12 · noch " + G.coffee, f: function() {
+      G.meState = "";
+      G.coffee--;
+      G.stress = Math.max(0, G.stress - 12);
+      log("Kaffee. Kurz Ruhe im Kopf.");
+      stepParent(null);
+      afterParent();
+    } });
+    if (r === "wz" && !G.wlanUsed) L.push({ l: "WLAN-Router aus", d: "1 Stunde kein YouTube · Stress +6", cls: "media", f: function() {
+      G.wlanUsed = true;
+      G.wlan = 4;
+      G.stress += 6;
+      ["T", "M"].forEach(function(k) {
+        var K = G.kids[k];
+        if (K.media && K.media !== "Switch") K.media = null;
+      });
+      bub("T", "Internet kaputt!!");
+      log("Router aus. „Das Internet ist kaputt!“ Minecraft auf der Switch läuft allerdings offline weiter.", "warn");
+      afterParent();
+    } });
+    if (!G.appUsed) L.push({ l: "Bildschirmzeit-App", d: "zeigt einmal alle Räume", cls: "media", f: function() {
+      G.appUsed = true;
+      G.reveal = true;
+      log("Bildschirmzeit heute: T " + G.kids.T.mins + " min, M " + G.kids.M.mins + " min.", "hint");
+      render();
+    } });
+    L.push({ l: "Kurz durchatmen", d: "15 min", f: function() {
+      G.meState = "";
+      stepParent(null);
+      afterParent();
+    } });
+    return L;
+  }
+  var FIGPOS = {};
+  function roomVis(r) {
+    return G.mode === "kid" || G.pos[G.who] === r || G.reveal;
+  }
+  function kidRoom(k) {
+    if (G.mode === "kid") return k === G.who ? G.pos[k] : G.sib.pos;
+    return G.kids[k].pos;
+  }
+  function kidMedia(k) {
+    if (G.mode === "kid") {
+      if (k === G.who) return G.meMedia || null;
+      return G.sib.media;
+    }
+    return G.kids[k].media;
+  }
+  function grillOn() {
+    return G.pos.S === "ga" && (G.mode === "parent" && G.who === "S" ? G.meState === "grill" : G.t >= 240 && G.t < 270);
+  }
+  function mowOn() {
+    return G.pos.S === "ga" && (G.mode === "parent" && G.who === "S" ? G.meState === "mow" : G.t >= 120 && G.t < 165);
+  }
+  function cookOn() {
+    return G.pos.R === "ku" && (G.mode === "parent" && G.who === "R" ? G.meState === "cook" : G.t >= 225 && G.t < 270);
+  }
+  function seatedP(p) {
+    var s = pstate(p);
+    return G.pos[p] === "wz" && (s === "sleep" || s === "tv" || s === "phone");
+  }
+  var SLOTS = { kt: [96, 74, 116, 56], km: [110, 58, 128, 40], wz: [112, 130, 96, 64], ku: [100, 124, 140, 86], ga: [150, 120, 240, 200] };
+  function layout() {
+    var P = {};
+    ["S", "R"].forEach(function(p) {
+      var r = G.pos[p];
+      if (!r) {
+        P[p] = { hidden: true };
+        return;
+      }
+      var st = pstate(p), o = { r, hold: st === "phone" ? "phone" : st === "call" ? "call" : st === "ipad" ? "tablet" : null, zzz: st === "sleep", talk: st === "call" || st === "chat", hp: st === "book" || G.mode === "parent" && p === G.who && p === "R" && G.rBook };
+      if (seatedP(p)) {
+        o.pose = "sit";
+        o.x = p === "S" ? 76 : 162;
+        o.y = 98;
+      } else if (r === "ga" && st === "call") {
+        o.x = 276;
+        o.y = 66;
+      } else if (r === "ga" && (st === "chat" || G.chat && G.chat.p === p && G.t < G.chat.until)) {
+        o.x = 316;
+        o.y = 66;
+        o.talk = true;
+      } else if (r === "ga" && p === "S" && grillOn()) {
+        o.x = 290;
+        o.y = 66;
+      } else if (r === "ga" && p === "S" && mowOn()) {
+        o.x = 326;
+        o.y = 66;
+      } else if (r === "ku" && p === "R" && cookOn()) {
+        o.x = 60;
+        o.y = 108;
+      }
+      P[p] = o;
+    });
+    ["T", "M"].forEach(function(k) {
+      var r = kidRoom(k);
+      if (!r || !roomVis(r)) {
+        P[k] = { hidden: true };
+        return;
+      }
+      if (G.mode === "kid" && k === G.who && G.meAct === "blanket" && r === FIG[k].own) {
+        P[k] = { hidden: true };
+        return;
+      }
+      var med = kidMedia(k), o = { r, hold: med === "iPad" ? "tablet" : med === "Switch" ? "pad" : med === "Handy" ? "phone" : med === "Fernseher" ? "remote" : null };
+      if (r === "wz" && (med === "Switch" || med === "Fernseher" || G.movie && !med && (G.mode === "parent" || k !== G.who || G.meAct === "movie"))) {
+        o.pose = "sit";
+        o.x = k === "T" ? 22 : 42;
+        o.y = 96;
+      } else if (G.mode === "kid" && k === G.who && r === "ku" && G.meAct === "ipad") {
+        o.pose = "sit";
+        o.x = 146;
+        o.y = 104;
+      } else if (G.mode === "kid" && k === G.who && r === "kt" && G.meAct === "drum") {
+        o.pose = "sit";
+        o.hold = "sticks";
+        o.x = 68;
+        o.y = 104;
+      } else if (G.mode === "kid" && k === G.who && r === "km" && G.meAct === "guitar") {
+        o.hold = "guitar";
+        o.x = 58;
+        o.y = 108;
+      } else if (G.mode === "kid" && k === G.who && r === "kt" && G.meAct === "lego") {
+        o.hold = "brick";
+        o.x = 56;
+        o.y = 108;
+      } else if (G.mode === "kid" && k === G.who && r === "ga" && G.meAct === "kick") {
+        o.x = 128;
+        o.y = 66;
+      } else if (G.mode === "kid" && k === G.who && r === FIG[k].own && (G.meAct === "hw" || G.meAct === "comic" || G.meAct === "chess")) {
+        o.pose = "sit";
+        o.hold = G.meAct === "chess" ? null : "book";
+        o.x = k === "T" ? 132 : 38;
+        o.y = 100;
+      } else if (G.mode === "kid" && k === G.who && r === "ga" && G.meAct === "tramp") {
+        o.bounce = true;
+        o.x = 226;
+        o.y = 52;
+      }
+      P[k] = o;
+    });
+    ["S", "R", "T", "M"].forEach(function(k) {
+      var o = P[k];
+      if (o.hidden || o.x !== void 0) return;
+      var taken = [];
+      ["S", "R", "T", "M"].forEach(function(j) {
+        if (j !== k && P[j].r === o.r && P[j].x !== void 0) taken.push(P[j].x);
+      });
+      var sl = SLOTS[o.r];
+      for (var i = 0; i < sl.length; i++) {
+        if (taken.every(function(x) {
+          return Math.abs(x - sl[i]) > 13;
+        })) {
+          o.x = sl[i];
+          break;
+        }
+      }
+      if (o.x === void 0) o.x = sl[0] + 10;
+      o.y = o.r === "ga" ? 66 : 108;
+    });
+    return P;
+  }
+  var CATSLOT = { kt: [[22, 108], [150, 108], [70, 110]], km: [[24, 108], [152, 108], [60, 111]], wz: [[150, 106], [92, 108], [66, 110]], ku: [[46, 104], [70, 104], [30, 108], [92, 108]], ga: [[110, 72], [60, 76], [338, 76], [150, 78]] };
+  function catPlaces(P) {
+    var res = {}, used = { kt: 0, km: 0, wz: 0, ku: 0, ga: 0 };
+    CATS.forEach(function(c) {
+      var r = G.cats[c.n], mode = "sit", x, y;
+      if (G.cbub && G.cbub.n === c.n && G.cbub.text === "Fauch!") mode = "hiss";
+      if (mode === "sit" && c.n === "Mogli" && r === "kt") {
+        mode = "sleep";
+        x = 56;
+        y = 76;
+      } else if (mode === "sit" && c.n === "Mogli" && r === "ga") {
+        mode = "sleep";
+        x = 112;
+        y = 80;
+      } else if (mode === "sit" && c.n === "Nia" && r === "km") {
+        mode = "sleep";
+        x = 124;
+        y = 76;
+      } else if (mode === "sit" && c.n === "Nelli" && r === "wz" && G.t >= 300) {
+        mode = "sleep";
+        if (P.S && !P.S.hidden && P.S.r === "wz" && P.S.pose === "sit") {
+          x = P.S.x + 3;
+          y = 84;
+        } else {
+          x = 30;
+          y = 76;
+        }
+      }
+      if (x === void 0) {
+        var sl = CATSLOT[r][used[r] % CATSLOT[r].length];
+        used[r]++;
+        x = sl[0];
+        y = sl[1];
+      }
+      res[c.n] = { r, x, y, mode, c };
+    });
+    return res;
+  }
+  var SPSLOT = { kt: [[86, 111], [60, 112], [150, 111], [108, 113]], km: [[60, 112], [120, 112], [30, 111], [150, 112]], wz: [[50, 112], [110, 111], [136, 112], [20, 111]], ku: [[100, 111], [124, 112], [140, 110], [30, 112]], ga: [[140, 72], [180, 76], [262, 74], [100, 74]] };
+  function tvMode() {
+    var m = null;
+    if (G.mode === "kid") {
+      if (G.pos[G.who] === "wz" && (G.meMedia === "Switch" || G.meMedia === "Fernseher")) m = G.meMedia === "Switch" ? "game" : G.meEdu ? "rober" : "yt";
+      else if (G.sib.pos === "wz" && G.sib.media) m = G.sib.media === "Switch" ? "game" : "yt";
+    } else {
+      ["T", "M"].forEach(function(k) {
+        var K = G.kids[k];
+        if (!m && K.pos === "wz" && K.media && K.media !== "Handy") m = K.media === "Switch" ? "game" : "yt";
+      });
+    }
+    if (!m && G.movie) m = "hero";
+    if (!m && ["S", "R"].some(function(p) {
+      return G.pos[p] === "wz" && pstate(p) === "tv";
+    })) m = G.t < 240 ? "football" : "series";
+    return m || "off";
+  }
+  function updateHouse() {
+    if (!$("house")) buildHouse();
+    var svg = $("house"), n = nightAt(G.t), i;
+    svg.style.setProperty("--sky", skyAt(G.t));
+    if ($("mini")) $("mini").style.setProperty("--sky", skyAt(G.t));
+    var sf = Math.min(1, G.t / 390);
+    $("sun").setAttribute("transform", "translate(" + (130 + 220 * sf).toFixed(1) + " " + (-30 + 72 * sf * sf).toFixed(1) + ")");
+    $("sun").setAttribute("opacity", (1 - n).toFixed(2));
+    $("moon").setAttribute("opacity", n.toFixed(2));
+    $("ostars").setAttribute("opacity", n.toFixed(2));
+    var ns = svg.querySelectorAll(".night");
+    for (i = 0; i < ns.length; i++) ns[i].setAttribute("opacity", (n * 0.55).toFixed(2));
+    var ps = svg.querySelectorAll(".pool");
+    for (i = 0; i < ps.length; i++) ps[i].setAttribute("opacity", (n * 0.85).toFixed(2));
+    var ss = svg.querySelectorAll(".stars");
+    for (i = 0; i < ss.length; i++) ss[i].setAttribute("opacity", n.toFixed(2));
+    $("lampcone").setAttribute("opacity", (n * 0.45).toFixed(2));
+    $("nightlight").setAttribute("fill", n > 0.3 ? "#ffe27a" : "#fff6c9");
+    $("attic").setAttribute("fill", n > 0.4 ? "#ffcf7a" : "#2a2540");
+    $("figs").style.filter = "brightness(" + (1 - 0.25 * n).toFixed(2) + ")";
+    var tv = tvMode();
+    $("tvscr").innerHTML = TVS[tv === "yt" ? "game" : tv] + (tv === "yt" || tv === "rober" ? YTBAR : "") + (tv === "yt" ? FACECAM : "");
+    $("tvglow").setAttribute("opacity", tv === "off" ? 0 : (0.35 + 0.4 * n).toFixed(2));
+    var wl = G.mode === "parent" && G.wlan > 0;
+    $("led1").setAttribute("fill", wl ? "#ff7d8e" : "#9be37c");
+    $("led2").setAttribute("fill", wl ? "#ff7d8e" : "#9be37c");
+    var g = grillOn();
+    $("grillfire").setAttribute("opacity", g ? 0.8 : 0);
+    $("sausages").setAttribute("opacity", g ? 1 : 0);
+    $("grillsmoke").setAttribute("opacity", g ? 1 : 0);
+    $("mower").setAttribute("class", mowOn() ? "mow" : "");
+    $("potsteam").setAttribute("opacity", cookOn() ? 1 : 0.2);
+    $("racket").style.display = G.tennis && G.t >= 165 && G.t < 225 ? "none" : "";
+    var din = G.t >= 270 && G.t < 300;
+    if (G.menu && $("dish").getAttribute("data-m") !== G.menu) {
+      $("dish").innerHTML = DISH[G.menu];
+      $("dish").setAttribute("data-m", G.menu);
+    }
+    $("dinner").setAttribute("opacity", din ? 1 : 0);
+    $("laptop").style.display = din ? "none" : "";
+    var P = layout();
+    $("mguitar").style.display = G.mode === "kid" && G.who === "M" && G.pos.M === "km" && G.meAct === "guitar" ? "none" : "";
+    $("phS").style.display = G.phone === "S" || seatedP("S") || pstate("S") === "call" || pstate("S") === "phone" ? "none" : "";
+    $("phR").style.display = G.phone === "R" || seatedP("R") || pstate("R") === "call" || pstate("R") === "phone" ? "none" : "";
+    ["S", "R", "T", "M"].forEach(function(k) {
+      var el = $("f-" + k), o = P[k];
+      if (o.hidden) {
+        el.style.opacity = 0;
+        return;
+      }
+      var rp = RP[o.r], gx = rp[0] + o.x, gy = rp[1] + o.y, key = gx + "," + gy;
+      var inner = figSVG(k, o);
+      if (o.bounce) inner = '<g class="bnc">' + inner + "</g>";
+      el.innerHTML = inner;
+      if (!FIGPOS[k]) el.style.transition = "none";
+      el.style.transform = "translate(" + gx + "px," + gy + "px)";
+      el.style.opacity = 1;
+      if (!FIGPOS[k]) {
+        el.getBoundingClientRect();
+        el.style.transition = "";
+      } else if (FIGPOS[k] !== key) {
+        var b2 = el.querySelector(".body");
+        if (b2) {
+          b2.classList.add("walk");
+          setTimeout(function() {
+            b2.classList.remove("walk");
+          }, 760);
+        }
+      }
+      FIGPOS[k] = key;
+      o.gx = gx;
+      o.gy = gy;
+    });
+    $("bell").setAttribute("class", G.ding ? "ringing" : "");
+    $("swjoy").style.display = G.mode === "kid" && G.swOut ? "none" : "";
+    $("ipadT").style.display = pstate("R") === "ipad" || G.mode === "kid" && G.meMedia === "iPad" || G.mode === "parent" && ["T", "M"].some(function(k) {
+      return G.kids[k].media === "iPad";
+    }) ? "none" : "";
+    var nbel = $("f-NB");
+    if (G.chat && G.t < G.chat.until && G.pos[G.chat.p] === "ga") {
+      nbel.innerHTML = "" + figSVG("S", { look: G.chat.who === "N" ? NLOOK : FLOOK, adult: true, talk: true });
+      if (!FIGPOS.NB) {
+        nbel.style.transition = "none";
+        nbel.style.transform = "translate(338px,353px)";
+        nbel.getBoundingClientRect();
+        nbel.style.transition = "";
+      }
+      nbel.style.transform = "translate(338px,353px)";
+      nbel.style.opacity = 1;
+      FIGPOS.NB = "338,353";
+    } else {
+      nbel.style.opacity = 0;
+      FIGPOS.NB = null;
+    }
+    ["T", "M"].forEach(function(h) {
+      var key = "F" + h, el = $("f-" + key), f = G.friends && G.friends[h], r = FIG[h].own;
+      if (!f || !roomVis(r)) {
+        el.style.opacity = 0;
+        FIGPOS[key] = null;
+        if (f) f.arr = false;
+        return;
+      }
+      var gx = RP[r][0] + (h === "T" ? 114 : 124), gy = RP[r][1] + 108;
+      el.innerHTML = "" + figSVG(h, { look: f.look });
+      if (!FIGPOS[key]) {
+        el.style.transition = "none";
+        el.style.transform = f.arr ? "translate(346px,312px)" : "translate(" + gx + "px," + gy + "px)";
+        el.style.opacity = 1;
+        el.getBoundingClientRect();
+        el.style.transition = f.arr ? "transform 1.6s ease-in-out,opacity .4s" : "";
+      }
+      el.style.transform = "translate(" + gx + "px," + gy + "px)";
+      el.style.opacity = 1;
+      FIGPOS[key] = gx + "," + gy;
+      f.arr = false;
+    });
+    var C = catPlaces(P);
+    ORDER.forEach(function(r) {
+      var d = "", vis = roomVis(r), rp = RP[r];
+      if (vis) {
+        var sp = G.spuren[r], used = 0;
+        sp.forEach(function(name) {
+          var xy;
+          if (r === "wz" && name === "Joy-Con auf dem Sofa") xy = [30, 80];
+          else if (name === "Legosteine unterm Bett") xy = r === "kt" ? [44, 101] : r === "km" ? [134, 101] : SPSLOT[r][0];
+          else if (r === "kt" && name === "Handy unterm Kissen") xy = [22, 74];
+          else if (r === "km" && name === "Handy unterm Kissen") xy = [154, 74];
+          else {
+            xy = SPSLOT[r][used % SPSLOT[r].length];
+            used++;
+          }
+          d += spurSVG(name, xy[0], xy[1]);
+        });
+      } else {
+        var w = rp[2], h = rp[3], lit = false;
+        ["T", "M"].forEach(function(k) {
+          if (kidRoom(k) === r && kidMedia(k)) lit = true;
+        });
+        d += '<rect x="' + (r === "ga" ? -10 : 0) + '" width="' + (r === "ga" ? 400 : w) + '" height="' + h + '" fill="#120f1f" opacity=".8"/><text x="' + w / 2 + '" y="' + (h / 2 + 9) + '" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="28" fill="#4a4266">?</text>';
+        if (lit && G.t >= 240) d += '<ellipse class="glowp" cx="' + w / 2 + '" cy="' + (h - 4) + '" rx="' + w * 0.42 + '" ry="6" fill="#7fe3ff" opacity=".55"/>';
+      }
+      if (G.mode === "kid" && G.pos[G.who] === r && (G.meAct === "drum" || G.meAct === "guitar")) {
+        var nx = G.meAct === "drum" ? 84 : 66;
+        d += '<g fill="#ffcf7a" font-family="Fredoka,sans-serif" font-weight="700"><text class="note" x="' + nx + '" y="70" font-size="8">♫</text><text class="note n2" x="' + (nx + 10) + '" y="64" font-size="6.5">♪</text><text class="note n3" x="' + (nx + 4) + '" y="58" font-size="7.5">♫</text></g>';
+      }
+      if (r === "ga" && G.mode === "kid" && G.pos[G.who] === "ga" && G.meAct === "kick") d += '<g transform="translate(142 64)"><g class="hop"><circle cx="0" cy="-3" r="3.4" fill="#fff" stroke="' + INK + '" stroke-width=".6"/><path d="M-1.2 -4.2l1.2-.8 1.2.8-.4 1.4h-1.6z" fill="' + INK + '"/></g></g>';
+      if (G.mode === "kid" && G.risk) {
+        var col = { green: "#9be37c", yellow: "#ffcf7a", red: "#ff7d8e" }[G.risk[r]];
+        var px = 11 + PLAQ[r].length * 4.7 + 10 + 8, py = r === "ga" ? 85.5 : 16.5;
+        d += '<circle class="' + (G.risk[r] === "red" ? "pulse" : "") + '" cx="' + px + '" cy="' + py + '" r="4.6" fill="' + col + '" stroke="#1d1a2b" stroke-width="1.4"></circle>';
+      }
+      if (G.mode === "kid" && G.cable === r && !G.hasCable) {
+        var cx = r === "ga" ? 300 : SPSLOT[r][2][0], cy = r === "ga" ? 80 : SPSLOT[r][2][1];
+        d += '<g transform="translate(' + cx + " " + cy + ')"><path d="M-9 0q4-6 8-1t8-1" stroke="#f3eefa" stroke-width="1.3" fill="none"/><rect x="6" y="-3" width="4.4" height="2.8" rx=".6" fill="#9aa6c4"/></g>';
+      }
+      if (G.mode === "kid" && G.meAct === "blanket" && G.pos[G.who] === r && r === FIG[G.who].own) {
+        var bx = r === "kt" ? 48 : 132;
+        d += '<path d="M' + (bx - 18) + ' 86q4-13 18-13t18 13z" fill="' + (r === "kt" ? "#c7322b" : "#1d2450") + '" stroke="#1d1a2b" stroke-width=".6"/><ellipse class="glowp" cx="' + bx + '" cy="84.6" rx="7" ry="2" fill="#7fe3ff"/>';
+      }
+      if (G._tip && G._tip.go === r && G.pos[G.who] !== r) d += '<rect class="pulse" x="2.5" y="2.5" width="' + (rp[2] - 5) + '" height="' + (rp[3] - 5) + '" rx="3" fill="none" stroke="#ffcf7a" stroke-width="2.4" stroke-dasharray="7 5"/>';
+      CATS.forEach(function(c) {
+        var q = C[c.n];
+        if (q.r !== r) return;
+        d += '<g transform="translate(' + q.x + " " + q.y + ') scale(1.05)">' + catSVG(c, q.mode) + "</g>";
+        q.gx = rp[0] + q.x;
+        q.gy = rp[1] + q.y;
+      });
+      $("dyn-" + r).innerHTML = d;
+      var rm = $("rm-" + r);
+      if (rm) rm.setAttribute("class", G.pos[G.who] === r ? "here" : "");
+    });
+    var b = "", stack = {}, placed = [];
+    var place = function(text, x, y) {
+      var w = text.length * 3.3 + 10;
+      for (var t = 0; t < 5; t++) {
+        var hit = placed.some(function(p) {
+          return Math.abs(p.x - x) < (p.w + w) / 2 + 2 && Math.abs(p.y - y) < 12;
+        });
+        if (!hit) break;
+        y -= 13;
+      }
+      placed.push({ x, y, w });
+      return bubbleSVG(text, x, y);
+    };
+    (G.bubs || []).forEach(function(q) {
+      var o = q.who === "NB" ? FIGPOS.NB ? { gx: 338, gy: 353 } : null : P[q.who];
+      if (!o || o.hidden || o.gx === void 0) return;
+      var top = q.who === "NB" ? 54 : FIG[q.who].mode === "kid" ? q.who === "M" ? 50 : 44 : 54;
+      var n2 = stack[q.who] || 0;
+      stack[q.who] = n2 + 1;
+      b += place(q.text, o.gx, o.gy - top - n2 * 13 + (o.bounce ? -12 : 0));
+    });
+    if (G.ding) b += place("DING DONG!", 346, 284);
+    if (G.cbub && C[G.cbub.n] && C[G.cbub.n].gx !== void 0) b += place(G.cbub.text, C[G.cbub.n].gx, C[G.cbub.n].gy - 20);
+    $("bubs").innerHTML = b;
+    applyVB();
+  }
+  var VB = [0, -44, 380, 431], VBT = null, FULL = [0, -44, 380, 431];
+  var ZOOM = (function() {
+    var z = store("medienfamilie-zoom");
+    return z === null || z === void 0 ? window.innerWidth < 700 : !!z;
+  })();
+  var RSHORT = { kt: "Zimmer T", km: "Zimmer M", wz: "Wohnen", ku: "Küche", ga: "Garten" };
+  function focusBox() {
+    var r = G.pos[G.who], p = RP[r];
+    if (r === "ga") {
+      var gx = FIGPOS[G.who] ? parseFloat(FIGPOS[G.who]) : 190;
+      var x = Math.max(0, Math.min(176, gx - 102));
+      return [x, 262, 204, 130];
+    }
+    return [p[0] - 8, p[1] - 26, p[2] + 16, p[3] + 32];
+  }
+  function applyVB() {
+    var svg = $("house");
+    if (!svg) return;
+    var t = ZOOM && G ? focusBox() : FULL, from = VB.slice(), t0 = null;
+    var red = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (VBT) cancelAnimationFrame(VBT);
+    if (red || from.join() === t.join()) {
+      VB = t;
+      svg.setAttribute("viewBox", t.join(" "));
+      return;
+    }
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / 450), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      VB = from.map(function(v, i) {
+        return v + (t[i] - v) * e;
+      });
+      svg.setAttribute("viewBox", VB.map(function(v) {
+        return v.toFixed(1);
+      }).join(" "));
+      if (k < 1) VBT = requestAnimationFrame(step);
+    }
+    VBT = requestAnimationFrame(step);
+  }
+  var ICO_HOUSE = '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="M2 9L9 3l7 6M4 8v7h10V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  var ICO_ZOOM = '<svg viewBox="0 0 18 18" aria-hidden="true"><circle cx="7.5" cy="7.5" r="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11.4 11.4L16 16M5.2 7.5h4.6M7.5 5.2v4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  function renderRooms() {
+    var me = G.who, rb = "";
+    ORDER.forEach(function(r) {
+      var vis = roomVis(r), who = [];
+      ["S", "R"].forEach(function(p) {
+        if (G.pos[p] === r) who.push(p);
+      });
+      ["T", "M"].forEach(function(k) {
+        if (vis && kidRoom(k) === r) who.push(k);
+      });
+      var nc = CATS.filter(function(c) {
+        return G.cats[c.n] === r;
+      }).length, sp = vis && G.spuren[r].length;
+      rb += '<button data-r="' + r + '" class="' + (G.pos[me] === r ? "here" : "") + '" aria-label="' + ROOMS[r] + '"><span>' + RSHORT[r] + '</span><span class="dots">' + who.map(function(k) {
+        return '<i style="background:' + LOOK[k].bg + '" title="' + NAME[k] + '">' + k + "</i>";
+      }).join("") + (vis ? "" : '<i class="q" title="unbekannt">?</i>') + (nc ? '<i class="cat" title="Katzen">' + nc + "</i>" : "") + (sp ? '<i class="sp" title="Spuren">!</i>' : "") + "</span></button>";
+    });
+    $("rooms").innerHTML = rb;
+    $("game").classList.toggle("zoomed", ZOOM);
+    $("zoom").innerHTML = ZOOM ? ICO_HOUSE : ICO_ZOOM;
+    $("zoom").setAttribute("aria-label", ZOOM ? "Ganzes Haus groß zeigen" : "Eigenes Zimmer groß zeigen");
+  }
+  function where(p) {
+    if (!G.pos[p]) return "unterwegs";
+    var s = pstate(p);
+    return IM[G.pos[p]] + (s === "book" ? ", Hörbuch im Ohr" : s === "ipad" ? ", Serie auf dem iPad" : s === "chat" ? ", quatscht am Tor" : s === "sleep" ? ", schläft" : s === "call" ? ", telefoniert" : s === "phone" ? ", am Handy" : s === "tv" ? ", vorm Fernseher" : "");
+  }
+  function actPill(d) {
+    var m = /(\d+) min/.exec(d);
+    if (m) return m[1] + "'";
+    if (/1 Stunde/.test(d)) return "60'";
+    return "0'";
+  }
+  function actDesc(d) {
+    return d.replace(/^\d+ min( · )?/, "").replace(/^1 Stunde( · )?/, "");
+  }
+  function render() {
+    var me = G.who, f = FIG[me];
+    $("av").innerHTML = avatar(me);
+    $("clock").innerHTML = clock(G.t) + "<small>Bettzeit 21:00</small>";
+    var v = G.mode === "kid" ? G.sus : G.stress;
+    $("barlbl").textContent = G.mode === "kid" ? "Verdacht" : "Stress";
+    $("barval").textContent = v + " %";
+    $("fill").style.width = v + "%";
+    $("mstat").textContent = G.mode === "kid" ? "Papa " + where("S") + " · Mama " + where("R") : (G.q === "S" ? "Papa " : "Mama ") + where(G.q);
+    $("score").innerHTML = (G.mode === "kid" ? "Spaß" : "Punkte") + "<b>" + (G.mode === "kid" ? G.fun : G.pts) + "</b>";
+    updateHouse();
+    renderRooms();
+    var m = "";
+    (G.warn || []).forEach(function(w) {
+      m += '<p class="' + (/maunzt im Flur|Fauchen/.test(w) ? "warn" : "hint") + '"><i>!</i><span>' + esc(w) + "</span></p>";
+    });
+    G.log.slice(-(3 - Math.min(2, (G.warn || []).length))).forEach(function(l) {
+      m += '<p class="' + l.cls + '"><i>' + l.t + "</i><span>" + esc(l.txt) + "</span></p>";
+    });
+    $("msgs").innerHTML = m;
+    var d = "", r = G.pos[me];
+    if (G.mode === "kid") {
+      d += '<span class="' + (G.hw >= 4 ? "ok" : "") + '">Hausaufgaben ' + G.hw + "/4</span>";
+      d += '<span class="' + (G.fed ? "ok" : "") + '">Katzen füttern</span>';
+      d += '<span class="' + (G.dinnerDone ? "ok" : G.dinnerCall ? "late" : "") + '">' + G.menu + " 18:30</span>";
+      var lgo = G.spuren[f.own].some(isLego);
+      d += '<span class="' + (lgo ? G.t >= 240 ? "late" : "" : "ok") + '">Aufräumtag bis 18:00</span>';
+      if (G.phone) d += '<span class="late">' + NAME[G.phone] + "s Handy dabei</span>";
+      if (inCall()) d += '<span class="free">Freifahrt bis ' + clock(G.call) + "</span>";
+      if (G.friends[me]) d += '<span class="free">Besuch da</span>';
+    } else {
+      G.tasks.forEach(function(x) {
+        d += '<span class="' + (x.done >= x.ticks ? "ok" : x.missed ? "late" : "") + '">' + x.l + "</span>";
+      });
+      ["kt", "km"].forEach(function(rr) {
+        d += '<span class="' + (G.spuren[rr].some(isLego) ? G.t >= 240 ? "late" : "" : "ok") + '">Aufräumtag ' + (rr === "kt" ? "T" : "M") + "</span>";
+      });
+    }
+    $("duty").innerHTML = d;
+    var sp = G.spuren[r] || [];
+    $("hint").innerHTML = "Du bist " + IM[r] + "." + (sp.length ? " Hier liegt: <b>" + esc(sp.join(", ")) + "</b>." : "") + (G.mode === "kid" ? " Raum antippen = hingehen (kostet keine Zeit)." : " Raum antippen = hingehen (15 min).");
+    var tip = G.mode === "kid" ? kidTip() : parentTip();
+    G._tip = tip;
+    $("tip").innerHTML = "<b>★ Tipp:</b> " + esc(tip.t) + (tip.go && tip.go !== r ? " <i>→ " + ROOMS[tip.go] + " antippen</i>" : "");
+    $("goals").innerHTML = (G.missions || []).map(function(m2) {
+      var ok = missionOk(m2, false);
+      return '<span class="' + (ok ? "ok" : "") + '">' + (ok ? "✓ " : "○ ") + esc(m2.t) + "</span>";
+    }).join("");
+    var RW = { green: "sicher", yellow: "riskant", red: "gefährlich" }, rk = G.mode === "kid" && G.risk ? G.risk[r] : null;
+    var a = "", acts = [];
+    if (G.mode === "kid") {
+      kidActionList().forEach(function(k) {
+        var A = KID_ACTS[k], d2 = A.d + (k === "blanket" ? " · Akku " + G.akku + " %" : "") + (A.media && rk ? " · " + RW[rk] : "");
+        acts.push({ key: k, l: A.l, d: d2, cls: (A.media ? "media" : A.safe ? "safe" : "") + (A.media && rk ? " risk-" + rk : ""), f: function() {
+          kidDo(k);
+        } });
+      });
+    } else acts = parentActions();
+    G._acts = acts;
+    acts.forEach(function(x, i) {
+      var rec = tip.k && (x.key === tip.k || x.l === tip.k);
+      a += '<button class="act ' + (x.cls || "") + (rec ? " rec" : "") + '" data-i="' + i + '"><span class="n">' + esc(x.l) + '</span><span class="c">' + actPill(x.d) + '</span><span class="d">' + esc(actDesc(x.d)) + "</span></button>";
+    });
+    $("actions").innerHTML = a;
+  }
+  function dialog(title, who, line, opts, calm) {
+    var h = "<h3" + (calm ? ' class="calm"' : "") + ">" + esc(title) + '</h3><div class="say">' + avatar(who) + "<p>" + esc(line) + '</p></div><div class="choice">';
+    opts.forEach(function(o, i) {
+      h += '<button class="btn' + (opts.length === 1 ? " go" : "") + '" data-o="' + i + '">' + esc(o.l) + (o.d ? "<small>" + esc(o.d) + "</small>" : "") + "</button>";
+    });
+    $("dlgbox").innerHTML = h + "</div>";
+    $("dlgbox")._opts = opts;
+    $("dlg").hidden = false;
+    if (G && $("house")) updateHouse();
+    var b = $("dlgbox").querySelector("button");
+    if (b) b.focus();
+  }
+  function closeDlg() {
+    $("dlg").hidden = true;
+  }
+  function endGame(survived) {
+    closeDlg();
+    var rows = [], total, title, sub, rating;
+    if (G.mode === "kid") {
+      rows.push(["Spaß", G.fun]);
+      rows.push(["Hausaufgaben fertig", G.hw >= 4 ? 6 : 0]);
+      rows.push(["Katzen gefüttert", G.fed ? 3 : 0]);
+      rows.push(["Aufräumtag (legofrei)", G.spuren[FIG[G.who].own].some(isLego) ? 0 : 6]);
+      rows.push(["Beim Essen dabei", G.dinnerDone ? 2 : 0]);
+      if (G.phone) rows.push(["Handy nicht zurückgelegt", -5]);
+      rows.push(["Verdacht", -Math.round(G.sus / 10)]);
+      if (!survived) rows.push(["Switch-Verbot", -10]);
+      title = survived ? "Bettzeit!" : "Alles weg.";
+      sub = survived ? "Zähne putzen, Licht aus. " + (G.who === "T" ? "Wanders liegt im Arm, Mogli rollt sich am Fußende ein." : "Fuffi wacht, Nia schleicht sich ins Zimmer.") + " Heute hat es " + G.rings + "-mal geklingelt. Morgen um 6 maunzt Mogli. Wie immer." : "Die Switch wandert in den Schrank. Bis Mittwoch.";
+    } else {
+      rows.push(["Kinder erwischt (" + G.caught + ")", G.pts - 3 * G.found]);
+      rows.push(["Spuren aufgeräumt (" + G.found + ")", 3 * G.found]);
+      var td = G.tasks.filter(function(x) {
+        return x.done >= x.ticks;
+      }).length;
+      rows.push(["Aufgaben erledigt (" + td + "/" + G.tasks.length + ")", td * 5]);
+      rows.push(["Stress", -Math.round(G.stress / 4)]);
+      if (!survived) rows.push(["Eskalation", -10]);
+      title = survived ? "Bettzeit!" : "Eskalation.";
+      sub = survived ? "Kinder im Bett, Nelli auf dem Sofa. Bildschirmzeit heute: T " + G.kids.T.mins + " min, M " + G.kids.M.mins + " min. Es hat " + G.rings + "-mal geklingelt. Morgen um 6 maunzt Mogli." : "Alle gehen früh ins Bett. Du auch.";
+    }
+    if (G.movie) rows.push(["Filmabend", G.mode === "kid" ? G.who === "T" ? 4 : 2 : 3]);
+    if (G.fein) rows.push(["M hat „fein“ gesagt!", G.mode === "kid" ? 2 : 5]);
+    var mdone = 0;
+    (G.missions || []).forEach(function(m) {
+      var ok = missionOk(m, true);
+      if (ok) mdone++;
+      rows.push(["Tagesziel: " + m.t + (ok ? " ✓" : ""), ok ? 5 : 0]);
+    });
+    unlock("feierabend");
+    if (mdone === 3) unlock("missions");
+    if (G.fein) unlock("fein");
+    if (G.movie) unlock("filmabend");
+    if (G.rings >= 6) unlock("taubenschlag");
+    if (G.mode === "kid" && survived && G.st.caught === 0) unlock("unsichtbar");
+    if (G.mode === "parent" && G.caught >= 5) unlock("sheriff");
+    total = rows.reduce(function(s, r) {
+      return s + r[1];
+    }, 0);
+    if (G.mode === "kid" && total >= 30) unlock("medienprofi");
+    if (G.mode === "kid") rating = total >= 30 ? "Medienprofi" : total >= 20 ? "Solide Couch-Kartoffel" : total >= 10 ? "Ausbaufähig" : "Erwischt-Abo";
+    else rating = total >= 60 ? "Bildschirm-Sheriff" : total >= 40 ? "Alles im Griff (fast)" : total >= 20 ? "Überfordert, aber liebevoll" : "Kinder 1, Eltern 0";
+    var best = store("medienfamilie-best") || {}, prev = best[G.who], had = prev !== void 0 && prev !== null;
+    if (!had || total > prev) {
+      best[G.who] = total;
+      store("medienfamilie-best", best);
+    }
+    var h = "<h3>" + title + '</h3><div class="say">' + avatar(G.who) + "<p>" + esc(sub) + '</p></div><table class="stat">';
+    rows.forEach(function(r) {
+      h += "<tr><td>" + esc(r[0]) + "</td><td>" + (r[1] > 0 ? "+" : "") + r[1] + "</td></tr>";
+    });
+    h += '<tr class="sum"><td>' + esc(rating) + "</td><td>" + total + "</td></tr></table>";
+    h += '<p class="rec">' + (had && total > prev ? "Neuer Rekord für " + NAME[G.who] + "!" : "Rekord " + NAME[G.who] + ": " + (had ? Math.max(total, prev) : total)) + "</p>";
+    if (G.achNew && G.achNew.length) h += '<p class="rec" style="color:var(--lamp)">★ Neue Erfolge: ' + esc(G.achNew.map(function(id) {
+      return ACH.filter(function(x) {
+        return x[0] === id;
+      })[0][1];
+    }).join(", ")) + "</p>";
+    h += '<div class="row"><button class="btn go" id="again">Nochmal<small>gleiche Figur</small></button><button class="btn" id="other">Andere Figur<small>zur Auswahl</small></button></div>';
+    $("endbox").innerHTML = h;
+    show("end");
+    var who = G.who;
+    $("again").onclick = function() {
+      begin(who);
+    };
+    $("other").onclick = startScreen;
+  }
+  function begin(k) {
+    closeDlg();
+    FIGPOS = {};
+    if (FIG[k].mode === "kid") startKid(k);
+    else startParent(k);
+    if (!store("medienfamilie-tut")) tutorial(G.mode, k);
+  }
+  function startScreen() {
+    var best = store("medienfamilie-best") || {}, h = "";
+    ["T", "M", "S", "R"].forEach(function(k) {
+      var f = FIG[k];
+      h += '<button class="fig" data-k="' + k + '"><span class="tp">' + avatar(k) + "<span><b>" + NAME[k] + "</b><small>" + f.role + "</small></span></span><p>" + esc(f.blurb) + "</p>" + (best[k] !== void 0 && best[k] !== null ? '<span class="best">Rekord: ' + best[k] + "</span>" : "") + "</button>";
+    });
+    $("figs").innerHTML = h;
+    var a = achGet();
+    $("achcount").textContent = ACH.filter(function(x) {
+      return a[x[0]];
+    }).length + " von " + ACH.length + " freigeschaltet";
+    show("start");
+  }
+  $("howto").addEventListener("click", function() {
+    tutorial("kid", "T");
+  });
+  $("achbtn").addEventListener("click", showAch);
+  $("figs").addEventListener("click", function(e) {
+    var b = e.target.closest(".fig");
+    if (b) begin(b.getAttribute("data-k"));
+  });
+  function roomClick(r) {
+    if (!G || !$("dlg").hidden) return;
+    G.bubs = [];
+    G.cbub = null;
+    if (G.mode === "kid") {
+      if (r !== G.pos[G.who]) {
+        G.pos[G.who] = r;
+        G.meMedia = null;
+        G.meAct = null;
+        render();
+      }
+    } else parentMove(r);
+  }
+  $("rooms").addEventListener("click", function(e) {
+    var b = e.target.closest("button");
+    if (b) roomClick(b.getAttribute("data-r"));
+  });
+  $("minihost").addEventListener("click", function(e) {
+    var m = $("mini");
+    if (!m || !m.getScreenCTM()) return;
+    var pt = m.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    var q = pt.matrixTransform(m.getScreenCTM().inverse()), hit = null;
+    Object.keys(RP).forEach(function(r) {
+      var p = RP[r];
+      if (q.x >= p[0] && q.x <= p[0] + p[2] && q.y >= p[1] && q.y <= p[1] + p[3]) hit = r;
+    });
+    if (hit) roomClick(hit);
+  });
+  $("zoom").addEventListener("click", function() {
+    ZOOM = !ZOOM;
+    store("medienfamilie-zoom", ZOOM);
+    if (G && !$("game").hidden) render();
+  });
+  $("plan").addEventListener("click", function(e) {
+    var b = e.target.closest(".room");
+    if (b) roomClick(b.getAttribute("data-r"));
+  });
+  $("plan").addEventListener("keydown", function(e) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("room")) {
+      e.preventDefault();
+      roomClick(e.target.getAttribute("data-r"));
+    }
+  });
+  $("actions").addEventListener("click", function(e) {
+    var b = e.target.closest(".act");
+    if (!b || !G || !$("dlg").hidden) return;
+    var x = G._acts[+b.getAttribute("data-i")];
+    if (x) {
+      G.bubs = [];
+      G.cbub = null;
+      x.f();
+    }
+  });
+  $("dlgbox").addEventListener("click", function(e) {
+    var b = e.target.closest("[data-o]");
+    if (!b) return;
+    var o = $("dlgbox")._opts[+b.getAttribute("data-o")];
+    if (o) o.f();
+  });
+  startScreen();
+})();
+</script>
+</body></html>
